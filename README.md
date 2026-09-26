@@ -17,6 +17,12 @@ A simple day, week and month planner built for how my ADHD brain works.
 
 Open `index.html` in a browser. Your data is saved in your browser.
 
+## Future Features
+
+- Currently working on creating a server version which is usable on any device
+- AI integration where it helps create a balanced schedule based on info on different goals
+
+
 ## License
 
 MIT
