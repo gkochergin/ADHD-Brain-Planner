@@ -1,753 +1,3040 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Planner</title>
-<style>
-:root{
-  --bg:#000000;
-  --surface:#0e0e10;
-  --raised:#16161a;
-  --raised-2:#1d1d22;
-  --line:#232328;
-  --line-2:#303038;
-  --ink:#ececef;
-  --ink-2:#8d8f97;
-  --ink-3:#5a5c64;
-  --radius:7px;
-  --gut:52px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{
-  background:var(--bg);color:var(--ink);
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
-  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
-  overflow:hidden;font-variant-numeric:tabular-nums;
-}
-button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
-input{font:inherit;color:inherit}
-:focus-visible{outline:1.5px solid #6f9bf0;outline-offset:2px;border-radius:3px}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planner</title>
 
-#app{display:flex;flex-direction:column;height:100vh}
+  <style>
+    /* =========================================================
+       COLORS AND SIZES
+       These are CSS variables. Change a value here and it
+       changes everywhere that uses it.
+       ========================================================= */
+    :root {
+      --background: #000000;     /* page background */
+      --panel: #0e0e10;          /* sidebar background */
+      --box: #16161a;            /* inputs and task cards */
+      --box-hover: #1d1d22;      /* inputs and cards when hovered or selected */
+      --border: #232328;         /* normal lines and borders */
+      --border-light: #303038;   /* borders when hovered */
+      --text: #ececef;           /* main text */
+      --text-dim: #8d8f97;       /* less important text */
+      --text-faint: #5a5c64;     /* even less important text */
+      --text-hint: #46474d;      /* hint text, like "nothing here yet" */
+      --corner: 7px;             /* how rounded the corners are */
+      --hour-labels-width: 52px; /* width of the "6a, 7a, 8a..." column */
+    }
 
-header{display:flex;align-items:center;gap:16px;padding:0 18px;height:56px;flex:none;border-bottom:1px solid var(--line)}
-.mark{display:flex;align-items:center;gap:9px;font-weight:500;letter-spacing:-.01em}
-.mark i{width:9px;height:9px;background:var(--ink);border-radius:2px;display:block}
-.datenav{display:flex;align-items:center;gap:2px}
-.datenav button{width:28px;height:28px;border-radius:6px;color:var(--ink-2);display:grid;place-items:center;font-size:15px;line-height:1}
-.datenav button:hover{background:var(--raised);color:var(--ink)}
-#today{width:auto;padding:0 11px;font-size:13px}
-.stamp{display:flex;align-items:baseline;gap:9px;min-width:0}
-.stamp b{font-weight:500;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
-.stamp span{color:var(--ink-3);font-size:13px;white-space:nowrap}
-.spacer{flex:1}
-.seg{display:flex;background:var(--raised);border:1px solid var(--line);border-radius:7px;padding:2px;gap:2px}
-.seg button{padding:4px 12px;border-radius:5px;font-size:12.5px;color:var(--ink-3)}
-.seg button[aria-pressed=true]{background:var(--raised-2);color:var(--ink)}
-.seg button:hover{color:var(--ink)}
-.hbtn{padding:6px 12px;border-radius:6px;font-size:13px;color:var(--ink-2);border:1px solid var(--line)}
-.hbtn:hover{background:var(--raised);color:var(--ink);border-color:var(--line-2)}
 
-main{display:flex;flex:1;min-height:0}
+    /* =========================================================
+       BASIC PAGE SETUP
+       ========================================================= */
 
-aside{width:284px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--surface)}
-.compose{padding:14px;border-bottom:1px solid var(--line);flex:none}
-.compose input[type=text]{width:100%;background:var(--raised);border:1px solid var(--line);border-radius:var(--radius);padding:9px 11px;font-size:13.5px}
-.compose input[type=text]::placeholder{color:var(--ink-3)}
-.compose input[type=text]:focus{border-color:var(--line-2);outline:none;background:var(--raised-2)}
-.row{display:flex;gap:7px;margin-top:9px;align-items:center}
-.mins{width:74px;background:var(--raised);border:1px solid var(--line);border-radius:var(--radius);padding:8px 9px;font-size:13px}
-.swatches{display:flex;gap:5px;flex:1}
-.sw{width:17px;height:17px;border-radius:50%;border:1.5px solid transparent;cursor:pointer;padding:0}
-.sw[aria-pressed=true]{border-color:var(--ink)}
-.addbtn{width:100%;margin-top:9px;padding:8px;border-radius:var(--radius);background:var(--raised-2);border:1px solid var(--line-2);font-size:13px}
-.addbtn:hover{background:#26262d}
-.repeat{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
-.repeat summary{font-size:12.5px;color:var(--ink-3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;user-select:none}
-.repeat summary::-webkit-details-marker{display:none}
-.repeat summary::before{content:"+";width:11px;color:var(--ink-3)}
-.repeat[open] summary::before{content:"−"}
-.repeat summary:hover{color:var(--ink-2)}
-.days{display:flex;gap:4px;margin-top:9px}
-.day{flex:1;padding:6px 0;border-radius:5px;background:var(--raised);border:1px solid var(--line);font-size:11.5px;color:var(--ink-3)}
-.day[aria-pressed=true]{background:var(--raised-2);border-color:var(--line-2);color:var(--ink)}
-.timerow{display:flex;gap:7px;margin-top:8px;align-items:center}
-.timerow label{font-size:12.5px;color:var(--ink-3);flex:none}
-.timerow input{flex:1;background:var(--raised);border:1px solid var(--line);border-radius:var(--radius);padding:7px 9px;font-size:13px}
+    /* Reset the default spacing that browsers add */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-.listwrap{flex:1;overflow-y:auto;padding:12px 14px 40px}
-.grouphead{font-size:12px;color:var(--ink-3);margin:14px 0 8px;display:flex;justify-content:space-between;align-items:baseline}
-.grouphead:first-child{margin-top:0}
-.grouphead em{font-style:normal;color:#46474d}
-.task{display:flex;align-items:flex-start;gap:9px;padding:9px 10px;margin-bottom:5px;background:var(--raised);border:1px solid var(--line);border-radius:var(--radius);cursor:grab;touch-action:none;user-select:none}
-.task:hover{border-color:var(--line-2);background:var(--raised-2)}
-.task.done{opacity:.38}
-.task.done .tt{text-decoration:line-through}
-.dot{width:8px;height:8px;border-radius:50%;flex:none;margin-top:5px}
-.tbody{flex:1;min-width:0}
-.tt{font-size:13.5px;line-height:1.35;word-break:break-word}
-.tmeta{font-size:11.5px;color:var(--ink-3);margin-top:3px}
-.tacts{display:flex;gap:3px;flex:none;opacity:0}
-.task:hover .tacts{opacity:1}
-.tacts button{width:22px;height:22px;border-radius:4px;color:var(--ink-3);display:grid;place-items:center;font-size:13px;line-height:1}
-.tacts button:hover{background:#2c2c34;color:var(--ink)}
-.empty{color:#46474d;font-size:12.5px;padding:8px 2px;line-height:1.6}
+    html,
+    body {
+      height: 100%;
+    }
 
-#stage{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+    body {
+      background: var(--background);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+      /* makes every number the same width, so times line up nicely */
+      font-variant-numeric: tabular-nums;
+    }
 
-#timeview{flex:1;display:flex;flex-direction:column;min-height:0}
-#timeview.off{display:none}
-#daybar{display:flex;height:50px;flex:none;border-bottom:1px solid var(--line);padding-left:var(--gut)}
-#daybar.solo{display:none}
-.dayhead{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;border-left:1px solid var(--line)}
-.dayhead:first-child{border-left:none}
-.dayhead .dw{font-size:11px;color:var(--ink-3)}
-.dayhead .dn{font-size:15px;line-height:1.3}
-.dayhead.today .dn{background:var(--ink);color:#000;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:500}
-.dayhead:hover{background:var(--surface)}
+    /* Remove the default browser look from buttons */
+    button {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
 
-#scroller{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
-#canvas{display:flex;position:relative}
-#gutter{width:var(--gut);flex:none;position:relative}
-.hlabel{position:absolute;right:8px;font-size:11px;color:var(--ink-3);transform:translateY(-6px)}
-#cols{flex:1;position:relative;min-width:0}
-.hr{position:absolute;left:0;right:0;border-top:1px solid var(--line);pointer-events:none}
-.hr.half{border-top-color:#141418}
-.vr{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);pointer-events:none}
-#now{position:absolute;height:1px;background:#e05c5c;z-index:6;pointer-events:none}
-#now::before{content:"";position:absolute;left:-4px;top:-3.5px;width:8px;height:8px;border-radius:50%;background:#e05c5c}
+    input {
+      font: inherit;
+      color: inherit;
+    }
 
-.block{position:absolute;border-radius:var(--radius);padding:4px 8px;overflow:hidden;cursor:grab;touch-action:none;user-select:none;z-index:3;border:1px solid;border-left-width:2.5px}
-.block:hover{z-index:5}
-.block.dragging{z-index:10;cursor:grabbing;box-shadow:0 6px 22px rgba(0,0,0,.6)}
-.bt{font-size:12px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bm{font-size:10.5px;color:var(--ink-2);margin-top:1px;white-space:nowrap;overflow:hidden}
-.block.tiny{padding:1px 8px;display:flex;align-items:center;gap:6px}
-.block.tiny .bm{margin-top:0}
-.grip{position:absolute;left:0;right:0;height:9px;cursor:ns-resize}
-.grip.t{top:-1px}
-.grip.b{bottom:-1px}
-.bx{position:absolute;top:2px;right:3px;width:17px;height:17px;border-radius:4px;display:grid;place-items:center;font-size:12px;color:var(--ink-2);opacity:0;line-height:1}
-.block:hover .bx{opacity:1}
-.bx:hover{background:rgba(0,0,0,.45);color:#fff}
+    /* Blue outline that shows up when you move around with the Tab key */
+    :focus-visible {
+      outline: 1.5px solid #6f9bf0;
+      outline-offset: 2px;
+      border-radius: 3px;
+    }
 
-#monthview{flex:1;display:none;flex-direction:column;min-height:0}
-#monthview.on{display:flex}
-#mhead{display:flex;height:28px;flex:none;border-bottom:1px solid var(--line)}
-#mhead div{flex:1;display:grid;place-items:center;font-size:11px;color:var(--ink-3)}
-#mgrid{flex:1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-height:0}
-.mcell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px 6px;min-height:0;overflow:hidden;display:flex;flex-direction:column;cursor:pointer}
-.mcell:nth-child(7n){border-right:none}
-.mcell.out{opacity:.3}
-.mcell:hover{background:var(--surface)}
-.mnum{font-size:12px;color:var(--ink-2);margin-bottom:4px;flex:none;align-self:flex-start;padding:0 2px}
-.mcell.today .mnum{background:var(--ink);color:#000;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-weight:500;padding:0}
-.chips{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:2px}
-.chip{display:flex;align-items:center;gap:5px;font-size:11px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;line-height:1.5;flex:none}
-.chip i{width:5px;height:5px;border-radius:50%;flex:none}
-.chip span{overflow:hidden;text-overflow:ellipsis}
-.more{font-size:10.5px;color:var(--ink-3);padding-left:6px;flex:none}
+    /* The whole app: header on top, everything else below it */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-#ghost{position:fixed;z-index:99;pointer-events:none;padding:7px 11px;border-radius:var(--radius);font-size:13px;border:1px solid;border-left-width:2.5px;box-shadow:0 8px 26px rgba(0,0,0,.65)}
-#drop{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.86);display:none;place-items:center;text-align:center;padding:24px}
-#drop.on{display:grid}
-#drop div{border:1.5px dashed var(--line-2);border-radius:14px;padding:44px 56px}
-#drop b{display:block;font-size:17px;font-weight:500;margin-bottom:6px}
-#drop span{color:var(--ink-3);font-size:13px}
-#toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,14px);z-index:150;background:var(--raised-2);border:1px solid var(--line-2);border-radius:var(--radius);padding:9px 15px;font-size:13px;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none}
-#toast.on{opacity:1;transform:translate(-50%,0)}
-@media (prefers-reduced-motion:reduce){#toast{transition:none}}
-::-webkit-scrollbar{width:9px}
-::-webkit-scrollbar-thumb{background:#25252b;border-radius:5px}
-::-webkit-scrollbar-thumb:hover{background:#32323a}
-::-webkit-scrollbar-track{background:transparent}
-</style>
+
+    /* =========================================================
+       HEADER (the bar across the top)
+       ========================================================= */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 18px;
+      height: 56px;
+      flex: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    .logo-square {
+      display: block;
+      width: 9px;
+      height: 9px;
+      background: var(--text);
+      border-radius: 2px;
+    }
+
+    /* The ‹ Today › buttons */
+    .date-buttons {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .date-buttons button {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      color: var(--text-dim);
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .date-buttons button:hover {
+      background: var(--box);
+      color: var(--text);
+    }
+
+    #today-button {
+      width: auto;
+      padding: 0 11px;
+      font-size: 13px;
+    }
+
+    /* The big date text, like "Sep 27 – Oct 3" */
+    .date-title {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    #date-label {
+      font-weight: 500;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    #date-sublabel {
+      color: var(--text-faint);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    /* Empty space that pushes the next items to the right side */
+    .spacer {
+      flex: 1;
+    }
+
+    /* The Day / Week / Month switcher */
+    .view-switcher {
+      display: flex;
+      gap: 2px;
+      padding: 2px;
+      background: var(--box);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+    }
+
+    .view-switcher button {
+      padding: 4px 12px;
+      border-radius: 5px;
+      font-size: 12.5px;
+      color: var(--text-faint);
+    }
+
+    .view-switcher button:hover {
+      color: var(--text);
+    }
+
+    /* aria-pressed="true" means this is the selected button */
+    .view-switcher button[aria-pressed="true"] {
+      background: var(--box-hover);
+      color: var(--text);
+    }
+
+    /* "Import tasks" and "Save backup" */
+    .header-button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .header-button:hover {
+      background: var(--box);
+      color: var(--text);
+      border-color: var(--border-light);
+    }
+
+
+    /* =========================================================
+       MAIN AREA (sidebar on the left, calendar on the right)
+       ========================================================= */
+    main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+
+    /* =========================================================
+       SIDEBAR
+       ========================================================= */
+    .sidebar {
+      width: 284px;
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+    }
+
+    /* The "add a new task" area at the top of the sidebar */
+    .new-task-area {
+      flex: none;
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #title-input {
+      width: 100%;
+      padding: 9px 11px;
+      font-size: 13.5px;
+      background: var(--box);
+      border: 1px solid var(--border);
+      border-radius: var(--corner);
+    }
+
+    #title-input::placeholder {
+      color: var(--text-faint);
+    }
+
+    #title-input:focus {
+      outline: none;
+      background: var(--box-hover);
+      border-color: var(--border-light);
+    }
+
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 9px;
+    }
+
+    #minutes-input {
+      width: 74px;
+      padding: 8px 9px;
+      font-size: 13px;
+      background: var(--box);
+      border: 1px solid var(--border);
+      border-radius: var(--corner);
+    }
+
+    /* The row of colored circles */
+    .color-picker {
+      display: flex;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .color-button {
+      width: 17px;
+      height: 17px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+      cursor: pointer;
+    }
+
+    .color-button[aria-pressed="true"] {
+      border-color: var(--text);
+    }
+
+    .add-button {
+      width: 100%;
+      margin-top: 9px;
+      padding: 8px;
+      font-size: 13px;
+      background: var(--box-hover);
+      border: 1px solid var(--border-light);
+      border-radius: var(--corner);
+    }
+
+    .add-button:hover {
+      background: #26262d;
+    }
+
+    /* The "Repeat weekly" section that opens and closes */
+    .repeat-section {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .repeat-section summary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: var(--text-faint);
+      cursor: pointer;
+      user-select: none;
+      list-style: none; /* hides the default triangle */
+    }
+
+    /* Hides the default triangle in Safari */
+    .repeat-section summary::-webkit-details-marker {
+      display: none;
+    }
+
+    /* Show a "+" when closed... */
+    .repeat-section summary::before {
+      content: "+";
+      width: 11px;
+      color: var(--text-faint);
+    }
+
+    /* ...and a "−" when open */
+    .repeat-section[open] summary::before {
+      content: "−";
+    }
+
+    .repeat-section summary:hover {
+      color: var(--text-dim);
+    }
+
+    /* The S M T W T F S buttons */
+    .repeat-days {
+      display: flex;
+      gap: 4px;
+      margin-top: 9px;
+    }
+
+    .repeat-day-button {
+      flex: 1;
+      padding: 6px 0;
+      font-size: 11.5px;
+      color: var(--text-faint);
+      background: var(--box);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+    }
+
+    .repeat-day-button[aria-pressed="true"] {
+      color: var(--text);
+      background: var(--box-hover);
+      border-color: var(--border-light);
+    }
+
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .time-row label {
+      flex: none;
+      font-size: 12.5px;
+      color: var(--text-faint);
+    }
+
+    #start-time-input {
+      flex: 1;
+      padding: 7px 9px;
+      font-size: 13px;
+      background: var(--box);
+      border: 1px solid var(--border);
+      border-radius: var(--corner);
+    }
+
+    /* The list of tasks below the form */
+    .task-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px 40px;
+    }
+
+    /* "Tasks 3" and "Repeating 1" headings */
+    .list-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 14px 0 8px;
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    .list-heading:first-child {
+      margin-top: 0;
+    }
+
+    .list-count {
+      color: var(--text-hint);
+    }
+
+    .empty-message {
+      padding: 8px 2px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text-hint);
+    }
+
+    /* One task in the sidebar list */
+    .task-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 9px 10px;
+      margin-bottom: 5px;
+      background: var(--box);
+      border: 1px solid var(--border);
+      border-radius: var(--corner);
+      cursor: grab;
+      user-select: none;
+      touch-action: none; /* lets you drag it on a phone or tablet */
+    }
+
+    .task-card:hover {
+      background: var(--box-hover);
+      border-color: var(--border-light);
+    }
+
+    /* Finished tasks are faded and crossed out */
+    .task-card.done {
+      opacity: 0.38;
+    }
+
+    .task-card.done .task-title {
+      text-decoration: line-through;
+    }
+
+    .task-dot {
+      flex: none;
+      width: 8px;
+      height: 8px;
+      margin-top: 5px;
+      border-radius: 50%;
+    }
+
+    .task-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-title {
+      font-size: 13.5px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .task-details {
+      margin-top: 3px;
+      font-size: 11.5px;
+      color: var(--text-faint);
+    }
+
+    /* The ✓ and × buttons. Hidden until you hover the task. */
+    .task-buttons {
+      display: flex;
+      gap: 3px;
+      flex: none;
+      opacity: 0;
+    }
+
+    .task-card:hover .task-buttons {
+      opacity: 1;
+    }
+
+    .task-buttons button {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      color: var(--text-faint);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .task-buttons button:hover {
+      background: #2c2c34;
+      color: var(--text);
+    }
+
+
+    /* =========================================================
+       CALENDAR AREA (right side)
+       ========================================================= */
+    #calendar-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+
+
+    /* =========================================================
+       DAY AND WEEK VIEW
+       ========================================================= */
+    #time-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* The row of day names at the top (only shown in week view) */
+    #day-headers {
+      display: flex;
+      height: 50px;
+      flex: none;
+      padding-left: var(--hour-labels-width);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .day-header {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      cursor: pointer;
+      border-left: 1px solid var(--border);
+    }
+
+    .day-header:first-child {
+      border-left: none;
+    }
+
+    .day-header:hover {
+      background: var(--panel);
+    }
+
+    .day-name {
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    .day-number {
+      font-size: 15px;
+      line-height: 1.3;
+    }
+
+    /* Today's date gets a white circle */
+    .day-header.today .day-number {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--text);
+      color: #000000;
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    /* The part that scrolls up and down */
+    #time-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    #time-grid {
+      display: flex;
+      position: relative;
+    }
+
+    /* The "6a, 7a, 8a..." column on the left */
+    #hour-labels {
+      width: var(--hour-labels-width);
+      flex: none;
+      position: relative;
+    }
+
+    .hour-label {
+      position: absolute;
+      right: 8px;
+      font-size: 11px;
+      color: var(--text-faint);
+      transform: translateY(-6px); /* moves the text up so it sits on the line */
+    }
+
+    /* The area where the task blocks go */
+    #day-columns {
+      flex: 1;
+      position: relative;
+      min-width: 0;
+    }
+
+    /* Lines across the grid for every hour */
+    .hour-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 1px solid var(--border);
+      pointer-events: none; /* so the line doesn't block mouse clicks */
+    }
+
+    /* Darker lines for every half hour */
+    .hour-line.half-hour {
+      border-top-color: #141418;
+    }
+
+    /* Up-and-down lines between the days */
+    .day-divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      border-left: 1px solid var(--border);
+      pointer-events: none;
+    }
+
+    /* The red line that shows the current time */
+    #now-line {
+      position: absolute;
+      height: 1px;
+      background: #e05c5c;
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    /* The red dot at the left end of the "now" line */
+    #now-line::before {
+      content: "";
+      position: absolute;
+      left: -4px;
+      top: -3.5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e05c5c;
+    }
+
+    /* A task that has been placed on the calendar */
+    .block {
+      position: absolute;
+      z-index: 3;
+      padding: 4px 8px;
+      overflow: hidden;
+      border: 1px solid;
+      border-left-width: 2.5px;
+      border-radius: var(--corner);
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .block:hover {
+      z-index: 5;
+    }
+
+    .block.dragging {
+      z-index: 10;
+      cursor: grabbing;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.6);
+    }
+
+    .block-title {
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis; /* adds "..." if the title is too long */
+    }
+
+    .block-time {
+      margin-top: 1px;
+      font-size: 10.5px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    /* Short blocks put the title and time on one line */
+    .block.short {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 1px 8px;
+    }
+
+    .block.short .block-time {
+      margin-top: 0;
+    }
+
+    /* Invisible strips at the top and bottom of a block that you drag to resize it */
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 9px;
+      cursor: ns-resize;
+    }
+
+    .resize-handle.top {
+      top: -1px;
+    }
+
+    .resize-handle.bottom {
+      bottom: -1px;
+    }
+
+    /* The × button on a block. Hidden until you hover the block. */
+    .block-delete {
+      position: absolute;
+      top: 2px;
+      right: 3px;
+      width: 17px;
+      height: 17px;
+      display: grid;
+      place-items: center;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1;
+      color: var(--text-dim);
+      opacity: 0;
+    }
+
+    .block:hover .block-delete {
+      opacity: 1;
+    }
+
+    .block-delete:hover {
+      background: rgba(0, 0, 0, 0.45);
+      color: #ffffff;
+    }
+
+
+    /* =========================================================
+       MONTH VIEW
+       ========================================================= */
+    #month-view {
+      flex: 1;
+      display: none; /* hidden at first. The script shows it when needed. */
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* The row with Sun, Mon, Tue... */
+    #month-day-names {
+      display: flex;
+      height: 28px;
+      flex: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #month-day-names div {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    /* 7 columns, one for each day of the week */
+    #month-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      min-height: 0;
+    }
+
+    /* One day box in the month view */
+    .month-cell {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 5px 6px;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    /* The last box in each row doesn't need a right border */
+    .month-cell:nth-child(7n) {
+      border-right: none;
+    }
+
+    /* Days from the month before or after are faded */
+    .month-cell.other-month {
+      opacity: 0.3;
+    }
+
+    .month-cell:hover {
+      background: var(--panel);
+    }
+
+    .month-day-number {
+      flex: none;
+      align-self: flex-start;
+      margin-bottom: 4px;
+      padding: 0 2px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .month-cell.today .month-day-number {
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--text);
+      color: #000000;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .month-cell-tasks {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    /* One task inside a month day box */
+    .month-task {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 1px 5px;
+      font-size: 11px;
+      line-height: 1.5;
+      white-space: nowrap;
+      overflow: hidden;
+      border-radius: 3px;
+    }
+
+    .month-task-dot {
+      flex: none;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    .month-task-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* "+2 more" when there isn't room for every task */
+    .month-more {
+      flex: none;
+      padding-left: 6px;
+      font-size: 10.5px;
+      color: var(--text-faint);
+    }
+
+
+    /* =========================================================
+       POPUPS AND OVERLAYS
+       ========================================================= */
+
+    /* The box that follows your mouse while you drag a task from the sidebar */
+    #drag-preview {
+      position: fixed;
+      z-index: 99;
+      padding: 7px 11px;
+      font-size: 13px;
+      border: 1px solid;
+      border-left-width: 2.5px;
+      border-radius: var(--corner);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.65);
+      pointer-events: none;
+    }
+
+    /* The dark screen that shows up when you drag a file over the page */
+    #drop-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 200;
+      display: none; /* hidden until a file is dragged in */
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.86);
+    }
+
+    #drop-overlay.visible {
+      display: grid;
+    }
+
+    .drop-box {
+      padding: 44px 56px;
+      border: 1.5px dashed var(--border-light);
+      border-radius: 14px;
+    }
+
+    .drop-title {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 17px;
+      font-weight: 500;
+    }
+
+    .drop-subtitle {
+      font-size: 13px;
+      color: var(--text-faint);
+    }
+
+    /* The little message that pops up at the bottom, like "Imported 3 tasks." */
+    #popup-message {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      z-index: 150;
+      padding: 9px 15px;
+      font-size: 13px;
+      background: var(--box-hover);
+      border: 1px solid var(--border-light);
+      border-radius: var(--corner);
+      pointer-events: none;
+      /* starts invisible and a bit lower */
+      opacity: 0;
+      transform: translate(-50%, 14px);
+      transition: opacity 0.18s, transform 0.18s;
+    }
+
+    #popup-message.visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    /* Turn off the animation for people who asked their computer for less motion */
+    @media (prefers-reduced-motion: reduce) {
+      #popup-message {
+        transition: none;
+      }
+    }
+
+
+    /* =========================================================
+       SCROLLBARS (Chrome, Edge and Safari only)
+       ========================================================= */
+    ::-webkit-scrollbar {
+      width: 9px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #25252b;
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #32323a;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  </style>
 </head>
+
 <body>
-<div id="app">
-  <header>
-    <span class="mark"><i></i>Planner</span>
-    <div class="datenav">
-      <button id="prev" aria-label="Previous">‹</button>
-      <button id="today">Today</button>
-      <button id="next" aria-label="Next">›</button>
-    </div>
-    <div class="stamp"><b id="dlabel"></b><span id="dsub"></span></div>
-    <div class="spacer"></div>
-    <div class="seg" id="seg">
-      <button data-v="day">Day</button>
-      <button data-v="week">Week</button>
-      <button data-v="month">Month</button>
-    </div>
-    <button class="hbtn" id="import">Import tasks</button>
-    <button class="hbtn" id="export">Save backup</button>
-  </header>
-  <main>
-    <aside>
-      <div class="compose">
-        <input type="text" id="ntitle" placeholder="What needs doing?" autocomplete="off">
-        <div class="row">
-          <input type="number" class="mins" id="nmins" value="60" min="5" step="5" aria-label="Minutes">
-          <div class="swatches" id="swatches"></div>
+  <div id="app">
+
+    <!-- ===================== HEADER ===================== -->
+    <header>
+      <span class="logo">
+        <span class="logo-square"></span>
+        Planner
+      </span>
+
+      <div class="date-buttons">
+        <button id="previous-button" aria-label="Previous">‹</button>
+        <button id="today-button">Today</button>
+        <button id="next-button" aria-label="Next">›</button>
+      </div>
+
+      <!-- The script fills these in with the current date -->
+      <div class="date-title">
+        <span id="date-label"></span>
+        <span id="date-sublabel"></span>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="view-switcher">
+        <button id="day-view-button">Day</button>
+        <button id="week-view-button">Week</button>
+        <button id="month-view-button">Month</button>
+      </div>
+
+      <button class="header-button" id="import-button">Import tasks</button>
+      <button class="header-button" id="backup-button">Save backup</button>
+    </header>
+
+
+    <main>
+
+      <!-- ===================== SIDEBAR ===================== -->
+      <aside class="sidebar">
+
+        <!-- The form for adding a new task -->
+        <div class="new-task-area">
+          <input type="text" id="title-input" placeholder="What needs doing?" autocomplete="off">
+
+          <div class="form-row">
+            <input type="number" id="minutes-input" value="60" min="5" step="5" aria-label="Minutes">
+
+            <!-- The script gives each button its color using the COLORS list -->
+            <div class="color-picker">
+              <button class="color-button" data-color="blue" title="blue" aria-pressed="true"></button>
+              <button class="color-button" data-color="green" title="green" aria-pressed="false"></button>
+              <button class="color-button" data-color="amber" title="amber" aria-pressed="false"></button>
+              <button class="color-button" data-color="rose" title="rose" aria-pressed="false"></button>
+              <button class="color-button" data-color="purple" title="purple" aria-pressed="false"></button>
+              <button class="color-button" data-color="slate" title="slate" aria-pressed="false"></button>
+            </div>
+          </div>
+
+          <!-- <details> is a box that opens and closes when you click the <summary> -->
+          <details class="repeat-section" id="repeat-section">
+            <summary>Repeat weekly</summary>
+
+            <div class="repeat-days">
+              <button class="repeat-day-button" data-day="sun" title="sun" aria-pressed="false">S</button>
+              <button class="repeat-day-button" data-day="mon" title="mon" aria-pressed="true">M</button>
+              <button class="repeat-day-button" data-day="tue" title="tue" aria-pressed="false">T</button>
+              <button class="repeat-day-button" data-day="wed" title="wed" aria-pressed="true">W</button>
+              <button class="repeat-day-button" data-day="thu" title="thu" aria-pressed="false">T</button>
+              <button class="repeat-day-button" data-day="fri" title="fri" aria-pressed="true">F</button>
+              <button class="repeat-day-button" data-day="sat" title="sat" aria-pressed="false">S</button>
+            </div>
+
+            <div class="time-row">
+              <label for="start-time-input">Starts at</label>
+              <input type="time" id="start-time-input" value="10:00">
+            </div>
+          </details>
+
+          <button class="add-button" id="add-button">Add task</button>
         </div>
-        <details class="repeat" id="rep">
-          <summary>Repeat weekly</summary>
-          <div class="days" id="days"></div>
-          <div class="timerow"><label for="ntime">Starts at</label><input type="time" id="ntime" value="10:00"></div>
-        </details>
-        <button class="addbtn" id="add">Add task</button>
+
+        <!-- The script fills this with the list of tasks -->
+        <div class="task-list" id="task-list"></div>
+      </aside>
+
+
+      <!-- ===================== CALENDAR ===================== -->
+      <div id="calendar-area">
+
+        <!-- Day view and week view both use this -->
+        <div id="time-view">
+          <div id="day-headers"></div>
+          <div id="time-scroll">
+            <div id="time-grid">
+              <div id="hour-labels"></div>
+              <div id="day-columns"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Month view -->
+        <div id="month-view">
+          <div id="month-day-names">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div id="month-grid"></div>
+        </div>
+
       </div>
-      <div class="listwrap" id="list"></div>
-    </aside>
-    <div id="stage">
-      <div id="timeview">
-        <div id="daybar"></div>
-        <div id="scroller"><div id="canvas"><div id="gutter"></div><div id="cols"></div></div></div>
-      </div>
-      <div id="monthview">
-        <div id="mhead"></div>
-        <div id="mgrid"></div>
-      </div>
+    </main>
+  </div>
+
+
+  <!-- Shows up when you drag a file onto the page -->
+  <div id="drop-overlay">
+    <div class="drop-box">
+      <span class="drop-title">Drop to import</span>
+      <span class="drop-subtitle">A .json file of tasks</span>
     </div>
-  </main>
-</div>
-<div id="drop"><div><b>Drop to import</b><span>A .json file of tasks</span></div></div>
-<div id="toast"></div>
+  </div>
 
-<script>
-const START_H=6, END_H=23, PXH=60, SNAP=15, WEEK_START=0;
-const DAYK=['sun','mon','tue','wed','thu','fri','sat'];
-const DAYL=['S','M','T','W','T','F','S'];
-const DAYN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const COLORS={blue:'#6f9bf0',green:'#5fc2a0',amber:'#dfa055',rose:'#d97a90',purple:'#a98ada',slate:'#7e828c'};
-const CKEYS=Object.keys(COLORS);
-const KEY='planner.v1';
-const REDUCED=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  <!-- Little message that pops up at the bottom of the screen -->
+  <div id="popup-message"></div>
 
-let state={tasks:[],blocks:[],overrides:{},cur:iso(new Date()),view:'week'};
-let pickColor='blue', memoryOnly=false;
 
-function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function parseISO(s){const p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
-function addDays(s,n){const d=parseISO(s);d.setDate(d.getDate()+n);return iso(d)}
-function uid(){return Math.random().toString(36).slice(2,10)}
-function hhmm(m){const h=Math.floor(m/60),x=m%60,ap=h>=12?'PM':'AM';let hh=h%12;if(hh===0)hh=12;return hh+':'+String(x).padStart(2,'0')+' '+ap}
-function hmShort(m){const h=Math.floor(m/60),x=m%60;let hh=h%12;if(hh===0)hh=12;return x?hh+':'+String(x).padStart(2,'0'):String(hh)}
-function shortH(h){const ap=h>=12?'p':'a';let hh=h%12;if(hh===0)hh=12;return hh+ap}
-function dur(m){if(m<60)return m+'m';const h=Math.floor(m/60),x=m%60;return x?h+'h '+x+'m':h+'h'}
-function toMin(t){const p=String(t||'').split(':');return (+p[0]||0)*60+(+p[1]||0)}
-function rgba(hex,a){const n=parseInt(hex.slice(1),16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+  <script>
+    // =========================================================
+    // SETTINGS
+    // Change these numbers to change how the calendar looks.
+    // =========================================================
+    const FIRST_HOUR = 6;         // the calendar starts at 6 AM
+    const LAST_HOUR = 23;         // the calendar ends at 11 PM
+    const PIXELS_PER_HOUR = 60;   // how tall one hour is on the screen
+    const SNAP_MINUTES = 15;      // when you drag, times jump in 15 minute steps
 
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){memoryOnly=true}}
-function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r)}catch(e){memoryOnly=true}return null}
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('on'),2600)}
+    // The name used to save your data in the browser.
+    // Don't change this, or your old saved tasks won't load anymore.
+    const SAVE_KEY = 'planner.v1';
 
-function weekStart(s){const d=parseISO(s);const off=(d.getDay()-WEEK_START+7)%7;return addDays(s,-off)}
-function viewDays(){
-  if(state.view==='day')return[state.cur];
-  const w=weekStart(state.cur);
-  return Array.from({length:7},(_,i)=>addDays(w,i));
-}
-function monthCells(s){
-  const d=parseISO(s), first=iso(new Date(d.getFullYear(),d.getMonth(),1));
-  const start=weekStart(first);
-  const lastDay=new Date(d.getFullYear(),d.getMonth()+1,0);
-  const end=weekStart(iso(lastDay));
-  const rows=Math.round((parseISO(end)-parseISO(start))/604800000)+1;
-  return{start,rows,cells:Array.from({length:rows*7},(_,i)=>addDays(start,i)),month:d.getMonth()};
-}
+    // The colors you can pick for a task
+    const COLORS = {
+      blue: '#6f9bf0',
+      green: '#5fc2a0',
+      amber: '#dfa055',
+      rose: '#d97a90',
+      purple: '#a98ada',
+      slate: '#7e828c'
+    };
 
-function occursOn(t,ds){
-  const r=t.repeat;if(!r)return false;
-  if(r.from&&ds<r.from)return false;
-  if(r.until&&ds>r.until)return false;
-  return (r.days||[]).includes(DAYK[parseISO(ds).getDay()]);
-}
-function blocksFor(ds){
-  const out=[];
-  for(const b of state.blocks){
-    if(b.date!==ds)continue;
-    const t=state.tasks.find(x=>x.id===b.taskId);
-    if(t)out.push({key:b.id,real:true,task:t,date:ds,start:b.start,dur:b.dur});
-  }
-  for(const t of state.tasks){
-    if(!occursOn(t,ds))continue;
-    const ov=state.overrides[t.id+'|'+ds];
-    if(ov&&ov.deleted)continue;
-    out.push({key:'v:'+t.id+':'+ds,real:false,task:t,date:ds,
-      start:ov?ov.start:toMin(t.repeat.at),dur:ov?ov.dur:t.duration});
-  }
-  return out;
-}
-function pack(list){
-  const s=[...list].sort((a,b)=>a.start-b.start||b.dur-a.dur);
-  let g=[],end=-1;const groups=[];
-  for(const b of s){
-    if(g.length&&b.start>=end){groups.push(g);g=[];end=-1}
-    g.push(b);end=Math.max(end,b.start+b.dur);
-  }
-  if(g.length)groups.push(g);
-  for(const grp of groups){
-    const ends=[];
-    for(const b of grp){
-      let put=false;
-      for(let i=0;i<ends.length;i++){if(b.start>=ends[i]){b.col=i;ends[i]=b.start+b.dur;put=true;break}}
-      if(!put){b.col=ends.length;ends.push(b.start+b.dur)}
-    }
-    for(const b of grp)b.cols=ends.length;
-  }
-  return s;
-}
+    // Short names for the days of the week. getDay() gives 0 for Sunday, 1 for Monday, and so on.
+    const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function commit(b,start,d,newDate){
-  const nd=newDate||b.date;
-  if(b.real){
-    const rec=state.blocks.find(x=>x.id===b.key);
-    if(rec){rec.start=start;rec.dur=d;rec.date=nd}
-  }else if(nd===b.date){
-    state.overrides[b.task.id+'|'+b.date]={start,dur:d};
-  }else{
-    state.overrides[b.task.id+'|'+b.date]={deleted:true};
-    state.blocks.push({id:uid(),taskId:b.task.id,date:nd,start,dur:d});
-  }
-  save();
-}
-function removeBlock(b){
-  if(b.real)state.blocks=state.blocks.filter(x=>x.id!==b.key);
-  else state.overrides[b.task.id+'|'+b.date]={deleted:true};
-  save();render();
-}
-function nextFree(ds,d){
-  const bs=blocksFor(ds);
-  let t=9*60;
-  if(bs.length)t=Math.max(...bs.map(b=>b.start+b.dur));
-  return clamp(Math.round(t/SNAP)*SNAP,START_H*60,END_H*60-d);
-}
+    // True if the person turned on "reduce motion" on their computer
+    const WANTS_LESS_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// ---------- header ----------
-function renderHeader(){
-  const L=document.getElementById('dlabel'),S=document.getElementById('dsub');
-  const d=parseISO(state.cur), tod=iso(new Date());
-  if(state.view==='day'){
-    L.textContent=d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-    const diff=Math.round((d-parseISO(tod))/86400000);
-    S.textContent=diff===0?'Today':diff===1?'Tomorrow':diff===-1?'Yesterday':d.getFullYear();
-  }else if(state.view==='week'){
-    const a=parseISO(weekStart(state.cur)),b=parseISO(addDays(weekStart(state.cur),6));
-    const sameM=a.getMonth()===b.getMonth();
-    L.textContent=a.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' – '+
-      b.toLocaleDateString(undefined,sameM?{day:'numeric'}:{month:'short',day:'numeric'});
-    S.textContent=(weekStart(tod)===weekStart(state.cur)?'This week':b.getFullYear());
-  }else{
-    L.textContent=d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
-    const n=new Date();
-    S.textContent=(n.getMonth()===d.getMonth()&&n.getFullYear()===d.getFullYear())?'This month':'';
-  }
-  [...document.getElementById('seg').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.view));
-}
 
-// ---------- sidebar ----------
-function renderList(){
-  const wrap=document.getElementById('list');wrap.innerHTML='';
-  const one=state.tasks.filter(t=>!t.repeat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
-  const rep=state.tasks.filter(t=>t.repeat);
-  section('Tasks',one,'Add a task above, or drop in a .json file to bring in a whole batch.');
-  section('Repeating',rep,'Nothing repeating yet.');
-  function section(name,arr,msg){
-    const h=document.createElement('div');h.className='grouphead';
-    const a=document.createElement('span');a.textContent=name;
-    const b=document.createElement('em');b.textContent=arr.length||'';
-    h.append(a,b);wrap.appendChild(h);
-    if(!arr.length){const e=document.createElement('div');e.className='empty';e.textContent=msg;wrap.appendChild(e);return}
-    for(const t of arr)wrap.appendChild(taskEl(t));
-  }
-}
-function taskEl(t){
-  const el=document.createElement('div');
-  el.className='task'+(t.done?' done':'');
-  const dot=document.createElement('span');dot.className='dot';dot.style.background=COLORS[t.color]||COLORS.slate;
-  const body=document.createElement('div');body.className='tbody';
-  const tt=document.createElement('div');tt.className='tt';tt.textContent=t.title;
-  const meta=document.createElement('div');meta.className='tmeta';
-  let m=dur(t.duration);
-  if(t.repeat)m+=' · '+(t.repeat.days||[]).map(d=>d[0].toUpperCase()+d.slice(1,3)).join(' ')+' at '+hhmm(toMin(t.repeat.at));
-  else if(t.due)m+=' · due '+parseISO(t.due).toLocaleDateString(undefined,{month:'short',day:'numeric'});
-  meta.textContent=m;body.append(tt,meta);
-  const acts=document.createElement('div');acts.className='tacts';
-  if(!t.repeat){
-    const c=document.createElement('button');c.innerHTML='✓';c.title=t.done?'Mark not done':'Mark done';
-    c.onclick=e=>{e.stopPropagation();t.done=!t.done;save();render()};
-    c.addEventListener('pointerdown',e=>e.stopPropagation());
-    acts.appendChild(c);
-  }
-  const x=document.createElement('button');x.innerHTML='×';x.title='Delete task';
-  x.addEventListener('pointerdown',e=>e.stopPropagation());
-  x.onclick=e=>{
-    e.stopPropagation();
-    state.tasks=state.tasks.filter(v=>v.id!==t.id);
-    state.blocks=state.blocks.filter(v=>v.taskId!==t.id);
-    for(const k of Object.keys(state.overrides))if(k.startsWith(t.id+'|'))delete state.overrides[k];
-    save();render();
-  };
-  acts.appendChild(x);
-  el.append(dot,body,acts);
-  el.addEventListener('pointerdown',e=>startPull(e,t,el));
-  return el;
-}
+    // =========================================================
+    // THE APP'S DATA
+    //
+    // Everything the app needs to remember is in this one object.
+    // It gets saved to the browser every time something changes.
+    //
+    // A task looks like this:
+    //   { id: 'abc123', title: 'Gym', duration: 60, color: 'green' }
+    // It can also have:
+    //   done: true                  -> the task is checked off
+    //   due: '2026-10-01'           -> a due date (only comes from imported files)
+    //   repeat: { days: ['mon', 'wed'], at: '10:00' }
+    //                               -> the task shows up every Monday and Wednesday at 10 AM
+    //
+    // A block is a task that was dragged onto the calendar:
+    //   { id: 'xyz789', taskId: 'abc123', date: '2026-09-28', start: 540, dur: 60 }
+    //   start is minutes after midnight (540 = 9:00 AM), dur is how many minutes it lasts
+    //
+    // overrides are changes to ONE day of a repeating task. The key is "taskId|date":
+    //   'abc123|2026-09-28': { start: 600, dur: 30 }   -> moved to 10 AM on that day
+    //   'abc123|2026-09-29': { deleted: true }         -> removed from that day
+    // =========================================================
+    let appData = {
+      tasks: [],
+      blocks: [],
+      overrides: {},
+      currentDate: '',  // the date you are looking at, like '2026-09-28'
+      view: 'week'      // 'day', 'week' or 'month'
+    };
 
-// ---------- time views ----------
-function renderTime(){
-  const days=viewDays(),n=days.length,tod=iso(new Date());
-  const bar=document.getElementById('daybar');
-  bar.classList.toggle('solo',n===1);
-  bar.innerHTML='';
-  if(n>1)days.forEach(ds=>{
-    const d=parseISO(ds);
-    const h=document.createElement('div');
-    h.className='dayhead'+(ds===tod?' today':'');
-    const w=document.createElement('div');w.className='dw';w.textContent=DAYN[d.getDay()];
-    const num=document.createElement('div');num.className='dn';num.textContent=d.getDate();
-    h.append(w,num);
-    h.onclick=()=>{state.cur=ds;state.view='day';save();render()};
-    bar.appendChild(h);
-  });
+    let selectedColor = 'blue';   // the color picked in the "add task" form
+    let savingWorks = true;       // becomes false if the browser won't let us save
 
-  const gut=document.getElementById('gutter'),cols=document.getElementById('cols');
-  const H=(END_H-START_H)*PXH+20;
-  document.getElementById('canvas').style.height=H+'px';
-  gut.innerHTML='';cols.innerHTML='';
-  for(let h=START_H;h<=END_H;h++){
-    const y=(h-START_H)*PXH;
-    const lab=document.createElement('div');lab.className='hlabel';lab.style.top=y+'px';lab.textContent=shortH(h);
-    gut.appendChild(lab);
-    const l=document.createElement('div');l.className='hr';l.style.top=y+'px';cols.appendChild(l);
-    if(h<END_H){const hf=document.createElement('div');hf.className='hr half';hf.style.top=(y+PXH/2)+'px';cols.appendChild(hf)}
-  }
-  for(let i=1;i<n;i++){const v=document.createElement('div');v.className='vr';v.style.left=(i*100/n)+'%';cols.appendChild(v)}
 
-  const nowIdx=days.indexOf(tod);
-  if(nowIdx>=0){
-    const now=new Date(),mins=now.getHours()*60+now.getMinutes();
-    if(mins>=START_H*60&&mins<=END_H*60){
-      const nl=document.createElement('div');nl.id='now';
-      nl.style.top=((mins-START_H*60)/60*PXH)+'px';
-      nl.style.left=(nowIdx*100/n)+'%';
-      nl.style.width=(100/n)+'%';
-      cols.appendChild(nl);
-    }
-  }
-  days.forEach((ds,di)=>{
-    for(const b of pack(blocksFor(ds))){b.di=di;cols.appendChild(blockEl(b,n))}
-  });
-}
+    // =========================================================
+    // DATE HELPERS
+    // Dates are stored as text like '2026-09-28' because that is
+    // easy to save and easy to compare.
+    // =========================================================
 
-function place(el,b,n){
-  const dayW=100/n, w=dayW/b.cols, left=b.di*dayW+b.col*w;
-  el.style.left='calc('+left+'% + 3px)';
-  el.style.width='calc('+w+'% - 6px)';
-}
-function blockEl(b,n){
-  const c=COLORS[b.task.color]||COLORS.slate;
-  const el=document.createElement('div');
-  const h=b.dur/60*PXH;
-  el.className='block'+(h<32?' tiny':'');
-  el.style.top=((b.start-START_H*60)/60*PXH)+'px';
-  el.style.height=Math.max(h,18)+'px';
-  place(el,b,n);
-  el.style.background=rgba(c,.16);
-  el.style.borderColor=rgba(c,.34);
-  el.style.borderLeftColor=c;
-  const t=document.createElement('div');t.className='bt';t.textContent=b.task.title;
-  const m=document.createElement('div');m.className='bm';
-  m.textContent=n>3?hmShort(b.start)+'–'+hmShort(b.start+b.dur):hhmm(b.start)+' – '+hhmm(b.start+b.dur);
-  el.append(t,m);
-  const gt=document.createElement('div');gt.className='grip t';
-  const gb=document.createElement('div');gb.className='grip b';
-  el.append(gt,gb);
-  const x=document.createElement('button');x.className='bx';x.innerHTML='×';x.title='Remove from day';
-  x.addEventListener('pointerdown',e=>e.stopPropagation());
-  x.onclick=e=>{e.stopPropagation();removeBlock(b)};
-  el.appendChild(x);
-  gt.addEventListener('pointerdown',e=>startShape(e,b,el,'top',n));
-  gb.addEventListener('pointerdown',e=>startShape(e,b,el,'bottom',n));
-  el.addEventListener('pointerdown',e=>{
-    if(e.target.closest('.grip')||e.target.closest('.bx'))return;
-    startShape(e,b,el,'move',n);
-  });
-  return el;
-}
+    // Turns a Date into text like '2026-09-28'
+    function dateToText(date) {
+      let year = date.getFullYear();
+      let month = date.getMonth() + 1; // getMonth() starts at 0 for January, so add 1
+      let day = date.getDate();
 
-function colAt(x,n){
-  const r=document.getElementById('cols').getBoundingClientRect();
-  return clamp(Math.floor((x-r.left)/(r.width/n)),0,n-1);
-}
-function startShape(e,b,el,mode,n){
-  e.preventDefault();e.stopPropagation();
-  el.setPointerCapture(e.pointerId);
-  el.classList.add('dragging');
-  const y0=e.clientY,s0=b.start,d0=b.dur,di0=b.di;
-  const lo=START_H*60,hi=END_H*60;
-  let s=s0,d=d0,di=di0;
-  const move=ev=>{
-    const dl=Math.round((ev.clientY-y0)/PXH*60/SNAP)*SNAP;
-    if(mode==='move'){
-      s=clamp(s0+dl,lo,hi-d0);d=d0;
-      if(n>1){
-        const nd=colAt(ev.clientX,n);
-        if(nd!==di){di=nd;b.di=nd;b.col=0;b.cols=1;place(el,b,n)}
+      // Add a 0 in front of single numbers, so 9 becomes 09
+      if (month < 10) {
+        month = '0' + month;
       }
-    }else if(mode==='top'){const ns=clamp(s0+dl,lo,s0+d0-SNAP);d=d0+(s0-ns);s=ns}
-    else{d=clamp(d0+dl,SNAP,hi-s0);s=s0}
-    el.style.top=((s-lo)/60*PXH)+'px';
-    el.style.height=Math.max(d/60*PXH,18)+'px';
-    el.classList.toggle('tiny',d/60*PXH<32);
-    el.querySelector('.bm').textContent=n>3?hmShort(s)+'–'+hmShort(s+d):hhmm(s)+' – '+hhmm(s+d);
-  };
-  const up=()=>{
-    el.removeEventListener('pointermove',move);
-    el.removeEventListener('pointerup',up);
-    el.removeEventListener('pointercancel',up);
-    el.classList.remove('dragging');
-    const days=viewDays();
-    if(s!==s0||d!==d0||di!==di0){commit(b,s,d,days[di]);render()}
-  };
-  el.addEventListener('pointermove',move);
-  el.addEventListener('pointerup',up);
-  el.addEventListener('pointercancel',up);
-}
+      if (day < 10) {
+        day = '0' + day;
+      }
 
-// ---------- month view ----------
-function renderMonth(){
-  const head=document.getElementById('mhead'),grid=document.getElementById('mgrid');
-  head.innerHTML='';
-  for(let i=0;i<7;i++){const d=document.createElement('div');d.textContent=DAYN[(WEEK_START+i)%7];head.appendChild(d)}
-  const {rows,cells,month}=monthCells(state.cur), tod=iso(new Date());
-  grid.style.gridTemplateRows='repeat('+rows+',minmax(0,1fr))';
-  grid.innerHTML='';
-  for(const ds of cells){
-    const d=parseISO(ds);
-    const cell=document.createElement('div');
-    cell.className='mcell'+(d.getMonth()!==month?' out':'')+(ds===tod?' today':'');
-    cell.dataset.date=ds;
-    const num=document.createElement('div');num.className='mnum';num.textContent=d.getDate();
-    const chips=document.createElement('div');chips.className='chips';
-    const list=blocksFor(ds).sort((a,b)=>a.start-b.start);
-    for(const b of list){
-      const c=COLORS[b.task.color]||COLORS.slate;
-      const ch=document.createElement('div');ch.className='chip';
-      ch.style.background=rgba(c,.14);
-      const i=document.createElement('i');i.style.background=c;
-      const sp=document.createElement('span');sp.textContent=hmShort(b.start)+'  '+b.task.title;
-      ch.append(i,sp);chips.appendChild(ch);
+      return year + '-' + month + '-' + day;
     }
-    cell.append(num,chips);
-    cell.onclick=()=>{state.cur=ds;state.view='day';save();render()};
-    grid.appendChild(cell);
-  }
-  requestAnimationFrame(()=>{
-    for(const cell of grid.children){
-      const box=cell.querySelector('.chips');
-      const kids=[...box.children];
-      if(!kids.length)continue;
-      const fit=Math.max(0,Math.floor(box.clientHeight/(kids[0].offsetHeight+2)));
-      if(kids.length>fit&&fit>=1){
-        kids.slice(fit-1).forEach(k=>k.remove());
-        const m=document.createElement('div');m.className='more';
-        m.textContent='+'+(kids.length-(fit-1))+' more';
-        box.appendChild(m);
+
+    // Turns text like '2026-09-28' back into a Date
+    function textToDate(text) {
+      let parts = text.split('-');
+      let year = Number(parts[0]);
+      let month = Number(parts[1]) - 1; // Date wants 0 for January
+      let day = Number(parts[2]);
+      return new Date(year, month, day);
+    }
+
+    // Today's date as text
+    function getTodayText() {
+      return dateToText(new Date());
+    }
+
+    // addDaysToDate('2026-09-28', 3) gives '2026-10-01'. Use a negative number to go back.
+    function addDaysToDate(dateText, numberOfDays) {
+      let date = textToDate(dateText);
+      date.setDate(date.getDate() + numberOfDays);
+      return dateToText(date);
+    }
+
+    // Weeks start on Sunday. This finds the Sunday at the start of the week.
+    function getWeekStart(dateText) {
+      let date = textToDate(dateText);
+      let daysSinceSunday = date.getDay(); // 0 = Sunday, 1 = Monday, ...
+      return addDaysToDate(dateText, -daysSinceSunday);
+    }
+
+    // The dates shown in day view (1 date) or week view (7 dates)
+    function getVisibleDays() {
+      if (appData.view === 'day') {
+        return [appData.currentDate];
+      }
+
+      let days = [];
+      let sunday = getWeekStart(appData.currentDate);
+      for (let i = 0; i < 7; i++) {
+        days.push(addDaysToDate(sunday, i));
+      }
+      return days;
+    }
+
+    // All the dates shown in the month view.
+    // This includes a few days from the month before and after, so every row is a full week.
+    function getMonthDays(dateText) {
+      let date = textToDate(dateText);
+      let year = date.getFullYear();
+      let month = date.getMonth();
+
+      let firstOfMonth = dateToText(new Date(year, month, 1));
+      let lastOfMonth = dateToText(new Date(year, month + 1, 0)); // day 0 of next month = last day of this month
+
+      let gridStart = getWeekStart(firstOfMonth);                // the Sunday on or before the 1st
+      let gridEnd = addDaysToDate(getWeekStart(lastOfMonth), 6); // the Saturday on or after the last day
+
+      let days = [];
+      let day = gridStart;
+      // Text dates like '2026-09-28' can be compared with < and >
+      while (day <= gridEnd) {
+        days.push(day);
+        day = addDaysToDate(day, 1);
+      }
+      return days;
+    }
+
+
+    // =========================================================
+    // TIME AND TEXT HELPERS
+    // Times are stored as "minutes after midnight".
+    // For example 0 = 12:00 AM, 540 = 9:00 AM, 810 = 1:30 PM.
+    // =========================================================
+
+    // 570 -> '9:30 AM'
+    function minutesToTime(totalMinutes) {
+      let hours = Math.floor(totalMinutes / 60);
+      let minutes = totalMinutes % 60;
+
+      let amOrPm = 'AM';
+      if (hours >= 12) {
+        amOrPm = 'PM';
+      }
+
+      let hour12 = hours % 12;
+      if (hour12 === 0) {
+        hour12 = 12;
+      }
+
+      let minutesText = String(minutes);
+      if (minutes < 10) {
+        minutesText = '0' + minutes;
+      }
+
+      return hour12 + ':' + minutesText + ' ' + amOrPm;
+    }
+
+    // Shorter version for small spaces. 570 -> '9:30' and 540 -> '9'
+    function minutesToShortTime(totalMinutes) {
+      let hours = Math.floor(totalMinutes / 60);
+      let minutes = totalMinutes % 60;
+
+      let hour12 = hours % 12;
+      if (hour12 === 0) {
+        hour12 = 12;
+      }
+
+      if (minutes === 0) {
+        return String(hour12);
+      }
+
+      let minutesText = String(minutes);
+      if (minutes < 10) {
+        minutesText = '0' + minutes;
+      }
+      return hour12 + ':' + minutesText;
+    }
+
+    // The time range shown on a block.
+    // Week view is narrow, so it uses the short version.
+    function timeRangeText(start, duration, dayCount) {
+      let end = start + duration;
+      if (dayCount > 3) {
+        return minutesToShortTime(start) + '–' + minutesToShortTime(end);
+      } else {
+        return minutesToTime(start) + ' – ' + minutesToTime(end);
       }
     }
-  });
-}
 
-function render(){
-  renderHeader();renderList();
-  const tv=document.getElementById('timeview'),mv=document.getElementById('monthview');
-  if(state.view==='month'){tv.classList.add('off');mv.classList.add('on');renderMonth()}
-  else{tv.classList.remove('off');mv.classList.remove('on');renderTime()}
-}
+    // Labels for the left side of the calendar. 13 -> '1p'
+    function hourLabelText(hour) {
+      let amOrPm = 'a';
+      if (hour >= 12) {
+        amOrPm = 'p';
+      }
 
-// ---------- dragging a task in ----------
-function startPull(e,task,src){
-  if(e.target.closest('.tacts'))return;
-  e.preventDefault();
-  const x0=e.clientX,y0=e.clientY;
-  let ghost=null;
-  const move=ev=>{
-    if(!ghost&&Math.hypot(ev.clientX-x0,ev.clientY-y0)>4){
-      const c=COLORS[task.color]||COLORS.slate;
-      ghost=document.createElement('div');ghost.id='ghost';ghost.textContent=task.title;
-      ghost.style.background=rgba(c,.22);ghost.style.borderColor=rgba(c,.4);ghost.style.borderLeftColor=c;
-      ghost.style.width=Math.min(src.offsetWidth,230)+'px';
-      document.body.appendChild(ghost);src.style.opacity='.4';
+      let hour12 = hour % 12;
+      if (hour12 === 0) {
+        hour12 = 12;
+      }
+      return hour12 + amOrPm;
     }
-    if(ghost){ghost.style.left=(ev.clientX-14)+'px';ghost.style.top=(ev.clientY-16)+'px'}
-  };
-  const up=ev=>{
-    document.removeEventListener('pointermove',move);
-    document.removeEventListener('pointerup',up);
-    src.style.opacity='';
-    if(!ghost)return;
-    ghost.remove();
-    if(state.view==='month'){
-      const cell=(document.elementFromPoint(ev.clientX,ev.clientY)||{closest:()=>null}).closest('.mcell');
-      if(!cell)return;
-      const ds=cell.dataset.date;
-      state.blocks.push({id:uid(),taskId:task.id,date:ds,start:nextFree(ds,task.duration),dur:task.duration});
-      save();render();return;
+
+    // 45 -> '45m', 60 -> '1h', 90 -> '1h 30m'
+    function durationText(totalMinutes) {
+      if (totalMinutes < 60) {
+        return totalMinutes + 'm';
+      }
+
+      let hours = Math.floor(totalMinutes / 60);
+      let minutes = totalMinutes % 60;
+
+      if (minutes === 0) {
+        return hours + 'h';
+      }
+      return hours + 'h ' + minutes + 'm';
     }
-    const cols=document.getElementById('cols'),r=cols.getBoundingClientRect();
-    if(ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom)return;
-    const days=viewDays();
-    const ds=days[colAt(ev.clientX,days.length)];
-    let mins=START_H*60+(ev.clientY-r.top)/PXH*60;
-    mins=clamp(Math.round(mins/SNAP)*SNAP,START_H*60,END_H*60-task.duration);
-    state.blocks.push({id:uid(),taskId:task.id,date:ds,start:mins,dur:task.duration});
-    save();render();
-  };
-  document.addEventListener('pointermove',move);
-  document.addEventListener('pointerup',up);
-}
 
-// ---------- compose ----------
-const swWrap=document.getElementById('swatches');
-CKEYS.forEach(k=>{
-  const b=document.createElement('button');b.className='sw';b.style.background=COLORS[k];
-  b.setAttribute('aria-pressed',k===pickColor);b.title=k;
-  b.onclick=()=>{pickColor=k;[...swWrap.children].forEach(c=>c.setAttribute('aria-pressed',c===b))};
-  swWrap.appendChild(b);
-});
-const dayWrap=document.getElementById('days');
-let pickDays=new Set(['mon','wed','fri']);
-DAYK.forEach((k,i)=>{
-  const b=document.createElement('button');b.className='day';b.textContent=DAYL[i];b.title=k;
-  b.setAttribute('aria-pressed',pickDays.has(k));
-  b.onclick=()=>{pickDays.has(k)?pickDays.delete(k):pickDays.add(k);b.setAttribute('aria-pressed',pickDays.has(k))};
-  dayWrap.appendChild(b);
-});
-function addTask(){
-  const ti=document.getElementById('ntitle'),title=ti.value.trim();
-  if(!title){ti.focus();return}
-  const mins=Math.max(5,parseInt(document.getElementById('nmins').value)||60);
-  const t={id:uid(),title,duration:mins,color:pickColor};
-  if(document.getElementById('rep').open&&pickDays.size)
-    t.repeat={days:[...pickDays],at:document.getElementById('ntime').value||'10:00'};
-  state.tasks.push(t);save();render();ti.value='';ti.focus();
-}
-document.getElementById('add').onclick=addTask;
-document.getElementById('ntitle').addEventListener('keydown',e=>{if(e.key==='Enter')addTask()});
-
-// ---------- navigation ----------
-function slide(dir){
-  if(REDUCED)return;
-  const el=state.view==='month'?document.getElementById('mgrid'):document.getElementById('cols').parentElement;
-  el.animate([{transform:'translateX('+(dir*24)+'px)',opacity:.45},{transform:'none',opacity:1}],
-    {duration:190,easing:'cubic-bezier(.22,.61,.36,1)'});
-}
-function step(n){
-  if(state.view==='day')state.cur=addDays(state.cur,n);
-  else if(state.view==='week')state.cur=addDays(state.cur,n*7);
-  else{const d=parseISO(state.cur);d.setDate(1);d.setMonth(d.getMonth()+n);state.cur=iso(d)}
-  save();render();slide(n);
-}
-function setView(v){
-  state.view=v;save();render();
-  if(v!=='month')document.getElementById('scroller').scrollTop=Math.max(0,(8-START_H)*PXH-16);
-}
-document.getElementById('prev').onclick=()=>step(-1);
-document.getElementById('next').onclick=()=>step(1);
-document.getElementById('today').onclick=()=>{state.cur=iso(new Date());save();render()};
-document.getElementById('seg').onclick=e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)};
-document.addEventListener('keydown',e=>{
-  if(e.target.matches('input,select,textarea'))return;
-  if(e.key==='ArrowLeft')step(-1);
-  else if(e.key==='ArrowRight')step(1);
-  else if(e.key==='d')setView('day');
-  else if(e.key==='w')setView('week');
-  else if(e.key==='m')setView('month');
-  else if(e.key==='t'){state.cur=iso(new Date());save();render()}
-});
-
-let swipe=0,lock=false,swipeT=null;
-document.getElementById('stage').addEventListener('wheel',e=>{
-  if(Math.abs(e.deltaX)<=Math.abs(e.deltaY))return;
-  e.preventDefault();
-  clearTimeout(swipeT);swipeT=setTimeout(()=>{swipe=0},180);
-  if(lock)return;
-  swipe+=e.deltaX;
-  if(Math.abs(swipe)>60){
-    step(swipe>0?1:-1);swipe=0;lock=true;
-    setTimeout(()=>{lock=false},320);
-  }
-},{passive:false});
-
-// ---------- import / export ----------
-function ingest(text){
-  let data;
-  try{data=JSON.parse(text)}catch(err){toast("That file isn't valid JSON.");return}
-  const arr=Array.isArray(data)?data:data.tasks;
-  if(!Array.isArray(arr)){toast('No tasks found in that file.');return}
-  let n=0;
-  for(const raw of arr){
-    if(!raw||!raw.title)continue;
-    const t={id:uid(),title:String(raw.title),
-      duration:Math.max(5,parseInt(raw.duration)||60),
-      color:CKEYS.includes(raw.color)?raw.color:'slate'};
-    if(raw.due)t.due=raw.due;
-    if(raw.repeat&&Array.isArray(raw.repeat.days)){
-      const dd=raw.repeat.days.filter(x=>DAYK.includes(x));
-      if(dd.length)t.repeat={days:dd,at:raw.repeat.at||'09:00',from:raw.repeat.from||null,until:raw.repeat.until||null};
+    // '09:30' -> 570
+    function timeTextToMinutes(timeText) {
+      let parts = String(timeText || '').split(':');
+      let hours = Number(parts[0]) || 0;   // "|| 0" means use 0 if it isn't a number
+      let minutes = Number(parts[1]) || 0;
+      return hours * 60 + minutes;
     }
-    state.tasks.push(t);n++;
-  }
-  save();render();
-  toast(n?('Imported '+n+' task'+(n===1?'':'s')+'.'):'Nothing to import from that file.');
-}
-document.getElementById('import').onclick=()=>{
-  const f=document.createElement('input');f.type='file';f.accept='.json,application/json';
-  f.onchange=()=>{const file=f.files[0];if(file)file.text().then(ingest)};
-  f.click();
-};
-document.getElementById('export').onclick=()=>{
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='planner-backup-'+iso(new Date())+'.json';a.click();
-  URL.revokeObjectURL(a.href);toast('Backup saved to Downloads.');
-};
-const dz=document.getElementById('drop');let depth=0;
-window.addEventListener('dragenter',e=>{
-  if(![...(e.dataTransfer?.types||[])].includes('Files'))return;
-  e.preventDefault();depth++;dz.classList.add('on');
-});
-window.addEventListener('dragover',e=>{if(dz.classList.contains('on'))e.preventDefault()});
-window.addEventListener('dragleave',()=>{if(--depth<=0){depth=0;dz.classList.remove('on')}});
-window.addEventListener('drop',e=>{
-  if(!dz.classList.contains('on'))return;
-  e.preventDefault();depth=0;dz.classList.remove('on');
-  const f=e.dataTransfer.files[0];if(f)f.text().then(ingest);
-});
 
-// ---------- boot ----------
-const saved=load();
-if(saved&&saved.tasks){
-  state=Object.assign(state,saved);
-  state.cur=iso(new Date());
-  if(!['day','week','month'].includes(state.view))state.view='week';
-}else{
-  state.tasks=[
-    {id:uid(),title:'Read the assigned chapter',duration:45,color:'blue'},
-    {id:uid(),title:'Gym',duration:60,color:'green'},
-    {id:uid(),title:'Email + inbox',duration:30,color:'slate'}
-  ];
-}
-render();
-document.getElementById('scroller').scrollTop=Math.max(0,(8-START_H)*PXH-16);
-setInterval(()=>{if(state.view!=='month')renderTime()},60000);
-window.addEventListener('resize',()=>{if(state.view==='month')renderMonth()});
-if(memoryOnly)toast('Running in preview — download the file to keep your data.');
-</script>
+    // Rounds minutes to the nearest 15 (or whatever SNAP_MINUTES is)
+    function roundToSnap(minutes) {
+      return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES;
+    }
+
+    // Makes sure a number is not smaller than min and not bigger than max
+    function keepBetween(value, min, max) {
+      if (value < min) {
+        return min;
+      }
+      if (value > max) {
+        return max;
+      }
+      return value;
+    }
+
+    // Makes a random id like 'k3j9x0ab' so every task and block has its own name
+    function makeId() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+
+    // =========================================================
+    // COLOR HELPERS
+    // =========================================================
+
+    // True if the name is one of our colors, like 'blue'
+    function isKnownColor(colorName) {
+      return Object.keys(COLORS).includes(colorName);
+    }
+
+    // The hex color for a task. Uses gray if the task has a color we don't know.
+    function getTaskColor(task) {
+      if (isKnownColor(task.color)) {
+        return COLORS[task.color];
+      }
+      return COLORS.slate;
+    }
+
+    // Makes a see-through version of a color.
+    // colorWithOpacity('#6f9bf0', 0.5) -> 'rgba(111, 155, 240, 0.5)'
+    function colorWithOpacity(hexColor, opacity) {
+      // Hex colors are 3 pairs: red, green, blue. parseInt(..., 16) reads a hex number.
+      let red = parseInt(hexColor.substring(1, 3), 16);
+      let green = parseInt(hexColor.substring(3, 5), 16);
+      let blue = parseInt(hexColor.substring(5, 7), 16);
+      return 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + opacity + ')';
+    }
+
+
+    // =========================================================
+    // SAVING AND LOADING
+    // localStorage is a small storage space in the browser.
+    // It only holds text, so we turn our data into JSON text.
+    // =========================================================
+    function saveData() {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(appData));
+      } catch (error) {
+        // Some previews don't allow saving. The app still works, it just forgets on reload.
+        savingWorks = false;
+      }
+    }
+
+    function loadSavedData() {
+      try {
+        let savedText = localStorage.getItem(SAVE_KEY);
+        if (savedText) {
+          return JSON.parse(savedText);
+        }
+      } catch (error) {
+        savingWorks = false;
+      }
+      return null;
+    }
+
+
+    // =========================================================
+    // POPUP MESSAGE
+    // =========================================================
+    let popupTimer = null;
+
+    function showMessage(text) {
+      let popup = document.getElementById('popup-message');
+      popup.textContent = text;
+      popup.classList.add('visible');
+
+      // Hide it again after 2.6 seconds
+      clearTimeout(popupTimer);
+      popupTimer = setTimeout(function () {
+        popup.classList.remove('visible');
+      }, 2600);
+    }
+
+
+    // =========================================================
+    // FINDING THINGS IN THE DATA
+    // =========================================================
+    function findTask(taskId) {
+      for (let i = 0; i < appData.tasks.length; i++) {
+        if (appData.tasks[i].id === taskId) {
+          return appData.tasks[i];
+        }
+      }
+      return null;
+    }
+
+    function findBlock(blockId) {
+      for (let i = 0; i < appData.blocks.length; i++) {
+        if (appData.blocks[i].id === blockId) {
+          return appData.blocks[i];
+        }
+      }
+      return null;
+    }
+
+    // The name used in appData.overrides for one day of a repeating task
+    function overrideKey(taskId, dateText) {
+      return taskId + '|' + dateText;
+    }
+
+    // Does this repeating task show up on this date?
+    function repeatsOnDate(task, dateText) {
+      if (!task.repeat) {
+        return false;
+      }
+
+      // Some imported tasks have a start date ("from") or end date ("until")
+      if (task.repeat.from && dateText < task.repeat.from) {
+        return false;
+      }
+      if (task.repeat.until && dateText > task.repeat.until) {
+        return false;
+      }
+
+      let weekday = DAY_KEYS[textToDate(dateText).getDay()]; // like 'mon'
+      let repeatDays = task.repeat.days || [];
+      return repeatDays.includes(weekday);
+    }
+
+
+    // =========================================================
+    // WHAT IS ON THE CALENDAR FOR A DAY
+    //
+    // This gives back a list of "items" for one date. An item is
+    // everything needed to draw one box on the calendar:
+    //   {
+    //     isRepeating: false,     -> true if it came from a repeating task
+    //     blockId: 'xyz789',      -> only for items that are NOT repeating
+    //     task: (the task),
+    //     date: '2026-09-28',
+    //     start: 540,
+    //     dur: 60
+    //   }
+    // =========================================================
+    function getItemsForDate(dateText) {
+      let items = [];
+
+      // 1. Tasks that were dragged onto this date
+      for (let i = 0; i < appData.blocks.length; i++) {
+        let block = appData.blocks[i];
+        if (block.date !== dateText) {
+          continue;
+        }
+
+        let task = findTask(block.taskId);
+        if (!task) {
+          continue; // the task was deleted
+        }
+
+        items.push({
+          isRepeating: false,
+          blockId: block.id,
+          task: task,
+          date: dateText,
+          start: block.start,
+          dur: block.dur
+        });
+      }
+
+      // 2. Repeating tasks that land on this date
+      for (let i = 0; i < appData.tasks.length; i++) {
+        let task = appData.tasks[i];
+        if (!repeatsOnDate(task, dateText)) {
+          continue;
+        }
+
+        // Check if this one day was changed or removed
+        let change = appData.overrides[overrideKey(task.id, dateText)];
+        if (change && change.deleted) {
+          continue;
+        }
+
+        let start = timeTextToMinutes(task.repeat.at);
+        let dur = task.duration;
+        if (change) {
+          start = change.start;
+          dur = change.dur;
+        }
+
+        items.push({
+          isRepeating: true,
+          task: task,
+          date: dateText,
+          start: start,
+          dur: dur
+        });
+      }
+
+      return items;
+    }
+
+
+    // =========================================================
+    // SIDE-BY-SIDE LAYOUT FOR OVERLAPPING ITEMS
+    //
+    // If two items happen at the same time, they sit next to each
+    // other instead of on top of each other. This adds two things
+    // to each item:
+    //   item.column      -> which slot it goes in (0 is the left-most)
+    //   item.columnCount -> how many slots the space is split into
+    // =========================================================
+    function arrangeOverlaps(items) {
+      // Sort by start time. If two start at the same time, the longer one goes first.
+      items.sort(function (a, b) {
+        if (a.start !== b.start) {
+          return a.start - b.start;
+        }
+        return b.dur - a.dur;
+      });
+
+      // Step 1: split the items into groups that overlap each other
+      let groups = [];
+      let currentGroup = [];
+      let groupEndTime = -1;
+
+      for (let item of items) {
+        // If this item starts after everything in the group has ended, start a new group
+        if (currentGroup.length > 0 && item.start >= groupEndTime) {
+          groups.push(currentGroup);
+          currentGroup = [];
+          groupEndTime = -1;
+        }
+
+        currentGroup.push(item);
+        groupEndTime = Math.max(groupEndTime, item.start + item.dur);
+      }
+      if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+      }
+
+      // Step 2: in each group, put every item in the first slot that is free
+      for (let group of groups) {
+        let slotFreeAt = []; // the time when each slot becomes free again
+
+        for (let item of group) {
+          let foundSlot = false;
+
+          for (let slot = 0; slot < slotFreeAt.length; slot++) {
+            if (item.start >= slotFreeAt[slot]) {
+              item.column = slot;
+              slotFreeAt[slot] = item.start + item.dur;
+              foundSlot = true;
+              break;
+            }
+          }
+
+          // No free slot, so make a new one
+          if (!foundSlot) {
+            item.column = slotFreeAt.length;
+            slotFreeAt.push(item.start + item.dur);
+          }
+        }
+
+        for (let item of group) {
+          item.columnCount = slotFreeAt.length;
+        }
+      }
+
+      return items;
+    }
+
+
+    // =========================================================
+    // CHANGING THE DATA
+    // =========================================================
+
+    // Put a task on the calendar
+    function placeTask(task, dateText, startMinutes) {
+      appData.blocks.push({
+        id: makeId(),
+        taskId: task.id,
+        date: dateText,
+        start: startMinutes,
+        dur: task.duration
+      });
+      saveData();
+      showEverything();
+    }
+
+    // Save a new time, length or date for an item after it was dragged
+    function saveItemChange(item, newStart, newDur, newDate) {
+      if (!item.isRepeating) {
+        // A normal block: just update it
+        let block = findBlock(item.blockId);
+        if (block) {
+          block.start = newStart;
+          block.dur = newDur;
+          block.date = newDate;
+        }
+      } else if (newDate === item.date) {
+        // A repeating task moved on the same day: remember the new time for just this day
+        appData.overrides[overrideKey(item.task.id, item.date)] = { start: newStart, dur: newDur };
+      } else {
+        // A repeating task moved to another day:
+        // hide it on the old day and put a normal block on the new day
+        appData.overrides[overrideKey(item.task.id, item.date)] = { deleted: true };
+        appData.blocks.push({
+          id: makeId(),
+          taskId: item.task.id,
+          date: newDate,
+          start: newStart,
+          dur: newDur
+        });
+      }
+      saveData();
+    }
+
+    // Take an item off the calendar (the task stays in the sidebar)
+    function removeItem(item) {
+      if (!item.isRepeating) {
+        let blocksToKeep = [];
+        for (let block of appData.blocks) {
+          if (block.id !== item.blockId) {
+            blocksToKeep.push(block);
+          }
+        }
+        appData.blocks = blocksToKeep;
+      } else {
+        // For repeating tasks, only hide it on this one day
+        appData.overrides[overrideKey(item.task.id, item.date)] = { deleted: true };
+      }
+      saveData();
+      showEverything();
+    }
+
+    // Delete a task completely, including everywhere it was placed on the calendar
+    function deleteTask(taskId) {
+      let tasksToKeep = [];
+      for (let task of appData.tasks) {
+        if (task.id !== taskId) {
+          tasksToKeep.push(task);
+        }
+      }
+      appData.tasks = tasksToKeep;
+
+      let blocksToKeep = [];
+      for (let block of appData.blocks) {
+        if (block.taskId !== taskId) {
+          blocksToKeep.push(block);
+        }
+      }
+      appData.blocks = blocksToKeep;
+
+      // Remove any one-day changes for this task
+      for (let key of Object.keys(appData.overrides)) {
+        if (key.startsWith(taskId + '|')) {
+          delete appData.overrides[key];
+        }
+      }
+
+      saveData();
+      showEverything();
+    }
+
+    // Finds a time for a task dropped on a day in month view.
+    // It goes right after the last thing that day, or at 9 AM if the day is empty.
+    function findFreeTime(dateText, duration) {
+      let items = getItemsForDate(dateText);
+      let time = 9 * 60;
+
+      if (items.length > 0) {
+        time = 0;
+        for (let item of items) {
+          let endTime = item.start + item.dur;
+          if (endTime > time) {
+            time = endTime;
+          }
+        }
+      }
+
+      time = roundToSnap(time);
+      return keepBetween(time, FIRST_HOUR * 60, LAST_HOUR * 60 - duration);
+    }
+
+
+    // =========================================================
+    // SMALL DRAWING HELPERS
+    // =========================================================
+
+    // Marks a button as on or off. The CSS uses aria-pressed to style it,
+    // and screen readers use it to tell people which button is on.
+    function setButtonSelected(button, isSelected) {
+      if (isSelected) {
+        button.setAttribute('aria-pressed', 'true');
+      } else {
+        button.setAttribute('aria-pressed', 'false');
+      }
+    }
+
+    // How far down the calendar a time is, in pixels
+    function timeToPixels(minutes) {
+      let minutesSinceTop = minutes - FIRST_HOUR * 60;
+      return minutesSinceTop / 60 * PIXELS_PER_HOUR;
+    }
+
+    // How tall a block should be, in pixels
+    function durationToPixels(minutes) {
+      return minutes / 60 * PIXELS_PER_HOUR;
+    }
+
+
+    // =========================================================
+    // DRAW EVERYTHING
+    // Call this any time the data changes.
+    // =========================================================
+    function showEverything() {
+      showHeader();
+      showTaskList();
+
+      let timeView = document.getElementById('time-view');
+      let monthView = document.getElementById('month-view');
+
+      if (appData.view === 'month') {
+        timeView.style.display = 'none';
+        monthView.style.display = 'flex';
+        showMonthView();
+      } else {
+        timeView.style.display = 'flex';
+        monthView.style.display = 'none';
+        showTimeView();
+      }
+    }
+
+
+    // =========================================================
+    // HEADER
+    // =========================================================
+    function showHeader() {
+      let label = document.getElementById('date-label');
+      let sublabel = document.getElementById('date-sublabel');
+      let current = textToDate(appData.currentDate);
+      let todayText = getTodayText();
+
+      if (appData.view === 'day') {
+        // Example: "Monday, September 28"
+        label.textContent = current.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+        let oneDay = 1000 * 60 * 60 * 24; // one day in milliseconds
+        let daysAway = Math.round((current - textToDate(todayText)) / oneDay);
+
+        if (daysAway === 0) {
+          sublabel.textContent = 'Today';
+        } else if (daysAway === 1) {
+          sublabel.textContent = 'Tomorrow';
+        } else if (daysAway === -1) {
+          sublabel.textContent = 'Yesterday';
+        } else {
+          sublabel.textContent = current.getFullYear();
+        }
+
+      } else if (appData.view === 'week') {
+        let weekStart = getWeekStart(appData.currentDate);
+        let firstDay = textToDate(weekStart);
+        let lastDay = textToDate(addDaysToDate(weekStart, 6));
+
+        // Example: "Sep 27 – Oct 3", or "Sep 6 – 12" if it's all in one month
+        let firstText = firstDay.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        let lastText;
+        if (firstDay.getMonth() === lastDay.getMonth()) {
+          lastText = lastDay.toLocaleDateString(undefined, { day: 'numeric' });
+        } else {
+          lastText = lastDay.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+        label.textContent = firstText + ' – ' + lastText;
+
+        if (getWeekStart(todayText) === weekStart) {
+          sublabel.textContent = 'This week';
+        } else {
+          sublabel.textContent = lastDay.getFullYear();
+        }
+
+      } else {
+        // Month view. Example: "September 2026"
+        label.textContent = current.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+        let now = new Date();
+        if (now.getMonth() === current.getMonth() && now.getFullYear() === current.getFullYear()) {
+          sublabel.textContent = 'This month';
+        } else {
+          sublabel.textContent = '';
+        }
+      }
+
+      // Highlight the button for the view we are in
+      setButtonSelected(document.getElementById('day-view-button'), appData.view === 'day');
+      setButtonSelected(document.getElementById('week-view-button'), appData.view === 'week');
+      setButtonSelected(document.getElementById('month-view-button'), appData.view === 'month');
+    }
+
+
+    // =========================================================
+    // SIDEBAR TASK LIST
+    // =========================================================
+    function showTaskList() {
+      let list = document.getElementById('task-list');
+      list.innerHTML = ''; // clear the old list
+
+      // Split the tasks into normal ones and repeating ones.
+      // Normal tasks that are done go at the bottom.
+      let notDoneTasks = [];
+      let doneTasks = [];
+      let repeatingTasks = [];
+
+      for (let task of appData.tasks) {
+        if (task.repeat) {
+          repeatingTasks.push(task);
+        } else if (task.done) {
+          doneTasks.push(task);
+        } else {
+          notDoneTasks.push(task);
+        }
+      }
+      let normalTasks = notDoneTasks.concat(doneTasks);
+
+      addListSection(list, 'Tasks', normalTasks, 'Add a task above, or drop in a .json file to bring in a whole batch.');
+      addListSection(list, 'Repeating', repeatingTasks, 'Nothing repeating yet.');
+    }
+
+    // Adds a heading and its tasks to the sidebar list
+    function addListSection(list, headingText, tasks, emptyText) {
+      let heading = document.createElement('div');
+      heading.className = 'list-heading';
+
+      let name = document.createElement('span');
+      name.textContent = headingText;
+
+      let count = document.createElement('span');
+      count.className = 'list-count';
+      if (tasks.length > 0) {
+        count.textContent = tasks.length;
+      }
+
+      heading.appendChild(name);
+      heading.appendChild(count);
+      list.appendChild(heading);
+
+      if (tasks.length === 0) {
+        let empty = document.createElement('div');
+        empty.className = 'empty-message';
+        empty.textContent = emptyText;
+        list.appendChild(empty);
+        return;
+      }
+
+      for (let task of tasks) {
+        list.appendChild(makeTaskCard(task));
+      }
+    }
+
+    // Builds one task card for the sidebar.
+    // We use textContent (not innerHTML) for the title so any odd characters show up safely as text.
+    function makeTaskCard(task) {
+      let card = document.createElement('div');
+      card.className = 'task-card';
+      if (task.done) {
+        card.classList.add('done');
+      }
+
+      // Colored dot
+      let dot = document.createElement('span');
+      dot.className = 'task-dot';
+      dot.style.background = getTaskColor(task);
+
+      // Title and details
+      let info = document.createElement('div');
+      info.className = 'task-info';
+
+      let title = document.createElement('div');
+      title.className = 'task-title';
+      title.textContent = task.title;
+
+      let details = document.createElement('div');
+      details.className = 'task-details';
+      details.textContent = getTaskDetailsText(task);
+
+      info.appendChild(title);
+      info.appendChild(details);
+
+      // ✓ and × buttons
+      let buttons = document.createElement('div');
+      buttons.className = 'task-buttons';
+
+      // Only normal tasks can be checked off
+      if (!task.repeat) {
+        let doneButton = document.createElement('button');
+        doneButton.textContent = '✓';
+        if (task.done) {
+          doneButton.title = 'Mark not done';
+        } else {
+          doneButton.title = 'Mark done';
+        }
+        doneButton.addEventListener('click', function () {
+          task.done = !task.done; // flip true to false, or false to true
+          saveData();
+          showEverything();
+        });
+        buttons.appendChild(doneButton);
+      }
+
+      let deleteButton = document.createElement('button');
+      deleteButton.textContent = '×';
+      deleteButton.title = 'Delete task';
+      deleteButton.addEventListener('click', function () {
+        deleteTask(task.id);
+      });
+      buttons.appendChild(deleteButton);
+
+      card.appendChild(dot);
+      card.appendChild(info);
+      card.appendChild(buttons);
+
+      // Pressing down on the card starts dragging it to the calendar
+      card.addEventListener('pointerdown', function (event) {
+        startDraggingTask(event, task, card);
+      });
+
+      return card;
+    }
+
+    // The small gray text under a task title.
+    // Examples: "1h", "45m · due Oct 3", "1h · Mon Wed Fri at 10:00 AM"
+    function getTaskDetailsText(task) {
+      let text = durationText(task.duration);
+
+      if (task.repeat) {
+        let dayNames = [];
+        let repeatDays = task.repeat.days || [];
+        for (let day of repeatDays) {
+          // 'mon' -> 'Mon'
+          dayNames.push(day.charAt(0).toUpperCase() + day.slice(1, 3));
+        }
+        text = text + ' · ' + dayNames.join(' ') + ' at ' + minutesToTime(timeTextToMinutes(task.repeat.at));
+      } else if (task.due) {
+        let dueDate = textToDate(task.due);
+        text = text + ' · due ' + dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+
+      return text;
+    }
+
+
+    // =========================================================
+    // DAY AND WEEK VIEW
+    // =========================================================
+    function showTimeView() {
+      let days = getVisibleDays();
+      let dayCount = days.length; // 1 for day view, 7 for week view
+      let todayText = getTodayText();
+
+      // ----- Day names across the top (only in week view) -----
+      let dayHeaders = document.getElementById('day-headers');
+      dayHeaders.innerHTML = '';
+
+      if (dayCount === 1) {
+        dayHeaders.style.display = 'none';
+      } else {
+        dayHeaders.style.display = 'flex';
+        for (let dateText of days) {
+          dayHeaders.appendChild(makeDayHeader(dateText, todayText));
+        }
+      }
+
+      // ----- Clear the grid -----
+      let hourLabels = document.getElementById('hour-labels');
+      let columns = document.getElementById('day-columns');
+      hourLabels.innerHTML = '';
+      columns.innerHTML = '';
+
+      // Make the grid tall enough for all the hours (+20px so the last label isn't cut off)
+      let gridHeight = (LAST_HOUR - FIRST_HOUR) * PIXELS_PER_HOUR + 20;
+      document.getElementById('time-grid').style.height = gridHeight + 'px';
+
+      // ----- Hour labels and lines -----
+      for (let hour = FIRST_HOUR; hour <= LAST_HOUR; hour++) {
+        let top = (hour - FIRST_HOUR) * PIXELS_PER_HOUR;
+
+        let label = document.createElement('div');
+        label.className = 'hour-label';
+        label.style.top = top + 'px';
+        label.textContent = hourLabelText(hour);
+        hourLabels.appendChild(label);
+
+        let line = document.createElement('div');
+        line.className = 'hour-line';
+        line.style.top = top + 'px';
+        columns.appendChild(line);
+
+        // Half-hour line (not after the last hour)
+        if (hour < LAST_HOUR) {
+          let halfLine = document.createElement('div');
+          halfLine.className = 'hour-line half-hour';
+          halfLine.style.top = (top + PIXELS_PER_HOUR / 2) + 'px';
+          columns.appendChild(halfLine);
+        }
+      }
+
+      // ----- Lines between the days -----
+      for (let i = 1; i < dayCount; i++) {
+        let divider = document.createElement('div');
+        divider.className = 'day-divider';
+        divider.style.left = (i * 100 / dayCount) + '%';
+        columns.appendChild(divider);
+      }
+
+      // ----- Red line for the current time -----
+      let todayIndex = days.indexOf(todayText); // -1 if today isn't on screen
+      if (todayIndex !== -1) {
+        let now = new Date();
+        let nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+        if (nowMinutes >= FIRST_HOUR * 60 && nowMinutes <= LAST_HOUR * 60) {
+          let nowLine = document.createElement('div');
+          nowLine.id = 'now-line';
+          nowLine.style.top = timeToPixels(nowMinutes) + 'px';
+          nowLine.style.left = (todayIndex * 100 / dayCount) + '%';
+          nowLine.style.width = (100 / dayCount) + '%';
+          columns.appendChild(nowLine);
+        }
+      }
+
+      // ----- The task blocks -----
+      for (let dayIndex = 0; dayIndex < dayCount; dayIndex++) {
+        let items = getItemsForDate(days[dayIndex]);
+        arrangeOverlaps(items);
+
+        for (let item of items) {
+          item.dayIndex = dayIndex; // which column (day) it is in
+          columns.appendChild(makeBlockElement(item, dayCount));
+        }
+      }
+    }
+
+    // One day name at the top of week view. Clicking it opens that day.
+    function makeDayHeader(dateText, todayText) {
+      let date = textToDate(dateText);
+
+      let header = document.createElement('div');
+      header.className = 'day-header';
+      if (dateText === todayText) {
+        header.classList.add('today');
+      }
+
+      let name = document.createElement('div');
+      name.className = 'day-name';
+      name.textContent = DAY_NAMES[date.getDay()];
+
+      let number = document.createElement('div');
+      number.className = 'day-number';
+      number.textContent = date.getDate();
+
+      header.appendChild(name);
+      header.appendChild(number);
+
+      header.addEventListener('click', function () {
+        appData.currentDate = dateText;
+        appData.view = 'day';
+        saveData();
+        showEverything();
+      });
+
+      return header;
+    }
+
+    // Sets how far from the left a block is and how wide it is
+    function setBlockSideways(element, item, dayCount) {
+      let dayWidth = 100 / dayCount;                  // width of one day, in %
+      let width = dayWidth / item.columnCount;        // split it if things overlap
+      let left = item.dayIndex * dayWidth + item.column * width;
+
+      // The +3px and -6px leave a small gap on each side
+      element.style.left = 'calc(' + left + '% + 3px)';
+      element.style.width = 'calc(' + width + '% - 6px)';
+    }
+
+    // Sets how far down a block is, how tall it is, and its time text
+    function setBlockTimes(element, start, dur, dayCount) {
+      let height = durationToPixels(dur);
+
+      element.style.top = timeToPixels(start) + 'px';
+      element.style.height = Math.max(height, 18) + 'px'; // never smaller than 18px
+
+      // Blocks under 32px tall put everything on one line
+      if (height < 32) {
+        element.classList.add('short');
+      } else {
+        element.classList.remove('short');
+      }
+
+      element.querySelector('.block-time').textContent = timeRangeText(start, dur, dayCount);
+    }
+
+    // Builds one block on the calendar
+    function makeBlockElement(item, dayCount) {
+      let color = getTaskColor(item.task);
+
+      let block = document.createElement('div');
+      block.className = 'block';
+      block.style.background = colorWithOpacity(color, 0.16);
+      block.style.borderColor = colorWithOpacity(color, 0.34);
+      block.style.borderLeftColor = color;
+
+      let title = document.createElement('div');
+      title.className = 'block-title';
+      title.textContent = item.task.title;
+
+      let time = document.createElement('div');
+      time.className = 'block-time';
+
+      block.appendChild(title);
+      block.appendChild(time);
+
+      // Invisible strips at the top and bottom for resizing
+      let topHandle = document.createElement('div');
+      topHandle.className = 'resize-handle top';
+      let bottomHandle = document.createElement('div');
+      bottomHandle.className = 'resize-handle bottom';
+      block.appendChild(topHandle);
+      block.appendChild(bottomHandle);
+
+      // × button
+      let deleteButton = document.createElement('button');
+      deleteButton.className = 'block-delete';
+      deleteButton.textContent = '×';
+      deleteButton.title = 'Remove from day';
+      deleteButton.addEventListener('click', function () {
+        removeItem(item);
+      });
+      block.appendChild(deleteButton);
+
+      // Put it in the right spot (this also fills in the time text)
+      setBlockSideways(block, item, dayCount);
+      setBlockTimes(block, item.start, item.dur, dayCount);
+
+      // Dragging
+      topHandle.addEventListener('pointerdown', function (event) {
+        startDraggingBlock(event, item, block, 'resize-top', dayCount);
+      });
+      bottomHandle.addEventListener('pointerdown', function (event) {
+        startDraggingBlock(event, item, block, 'resize-bottom', dayCount);
+      });
+      block.addEventListener('pointerdown', function (event) {
+        // The handles and the × button have their own jobs, so ignore them here
+        if (event.target === topHandle || event.target === bottomHandle || event.target === deleteButton) {
+          return;
+        }
+        startDraggingBlock(event, item, block, 'move', dayCount);
+      });
+
+      return block;
+    }
+
+
+    // =========================================================
+    // MONTH VIEW
+    // =========================================================
+    function showMonthView() {
+      let grid = document.getElementById('month-grid');
+      let days = getMonthDays(appData.currentDate);
+      let rowCount = days.length / 7;
+      let currentMonth = textToDate(appData.currentDate).getMonth();
+      let todayText = getTodayText();
+
+      // Some months need 5 rows and some need 6
+      grid.style.gridTemplateRows = 'repeat(' + rowCount + ', minmax(0, 1fr))';
+      grid.innerHTML = '';
+
+      for (let dateText of days) {
+        grid.appendChild(makeMonthCell(dateText, currentMonth, todayText));
+      }
+
+      // Wait until the browser has drawn the boxes, then measure them
+      // and hide the tasks that don't fit.
+      requestAnimationFrame(hideTasksThatDontFit);
+    }
+
+    // One day box in month view
+    function makeMonthCell(dateText, currentMonth, todayText) {
+      let date = textToDate(dateText);
+
+      let cell = document.createElement('div');
+      cell.className = 'month-cell';
+      if (date.getMonth() !== currentMonth) {
+        cell.classList.add('other-month');
+      }
+      if (dateText === todayText) {
+        cell.classList.add('today');
+      }
+      // Save the date on the box so we know which day a task was dropped on
+      cell.dataset.date = dateText;
+
+      let number = document.createElement('div');
+      number.className = 'month-day-number';
+      number.textContent = date.getDate();
+
+      let taskArea = document.createElement('div');
+      taskArea.className = 'month-cell-tasks';
+
+      // Earliest first
+      let items = getItemsForDate(dateText);
+      items.sort(function (a, b) {
+        return a.start - b.start;
+      });
+
+      for (let item of items) {
+        let color = getTaskColor(item.task);
+
+        let row = document.createElement('div');
+        row.className = 'month-task';
+        row.style.background = colorWithOpacity(color, 0.14);
+
+        let dot = document.createElement('span');
+        dot.className = 'month-task-dot';
+        dot.style.background = color;
+
+        let text = document.createElement('span');
+        text.className = 'month-task-text';
+        text.textContent = minutesToShortTime(item.start) + ' ' + item.task.title;
+
+        row.appendChild(dot);
+        row.appendChild(text);
+        taskArea.appendChild(row);
+      }
+
+      cell.appendChild(number);
+      cell.appendChild(taskArea);
+
+      // Clicking a day opens it in day view
+      cell.addEventListener('click', function () {
+        appData.currentDate = dateText;
+        appData.view = 'day';
+        saveData();
+        showEverything();
+      });
+
+      return cell;
+    }
+
+    // If a day has more tasks than fit in its box, keep the first few and add "+3 more"
+    function hideTasksThatDontFit() {
+      let taskAreas = document.querySelectorAll('.month-cell-tasks');
+
+      for (let taskArea of taskAreas) {
+        let rows = taskArea.querySelectorAll('.month-task');
+        if (rows.length === 0) {
+          continue;
+        }
+
+        let rowHeight = rows[0].offsetHeight + 2; // +2 for the gap between rows
+        let howManyFit = Math.floor(taskArea.clientHeight / rowHeight);
+
+        if (rows.length > howManyFit && howManyFit >= 1) {
+          // Keep one less than what fits, so there is room for the "+3 more" line
+          let howManyToKeep = howManyFit - 1;
+
+          for (let i = howManyToKeep; i < rows.length; i++) {
+            rows[i].remove();
+          }
+
+          let more = document.createElement('div');
+          more.className = 'month-more';
+          more.textContent = '+' + (rows.length - howManyToKeep) + ' more';
+          taskArea.appendChild(more);
+        }
+      }
+    }
+
+
+    // =========================================================
+    // DRAGGING A BLOCK THAT IS ALREADY ON THE CALENDAR
+    //
+    // mode can be:
+    //   'move'          -> drag the whole block (and to another day in week view)
+    //   'resize-top'    -> drag the top edge to change the start time
+    //   'resize-bottom' -> drag the bottom edge to change the end time
+    // =========================================================
+    function startDraggingBlock(event, item, block, mode, dayCount) {
+      event.preventDefault();   // stops the browser from selecting text while dragging
+      event.stopPropagation();  // stops this press from also reaching the block underneath
+
+      // "Pointer capture" means the block keeps getting mouse moves
+      // even when the mouse goes outside of it
+      block.setPointerCapture(event.pointerId);
+      block.classList.add('dragging');
+
+      // Remember where things were when the drag started
+      let startMouseY = event.clientY;
+      let originalStart = item.start;
+      let originalDur = item.dur;
+      let originalDayIndex = item.dayIndex;
+
+      let earliestTime = FIRST_HOUR * 60;
+      let latestTime = LAST_HOUR * 60;
+
+      // These change while dragging
+      let newStart = originalStart;
+      let newDur = originalDur;
+      let newDayIndex = originalDayIndex;
+
+      function onMouseMove(moveEvent) {
+        // How far the mouse moved up or down, turned into minutes and snapped to 15
+        let pixelsMoved = moveEvent.clientY - startMouseY;
+        let minutesMoved = roundToSnap(pixelsMoved / PIXELS_PER_HOUR * 60);
+
+        if (mode === 'move') {
+          newStart = keepBetween(originalStart + minutesMoved, earliestTime, latestTime - originalDur);
+          newDur = originalDur;
+
+          // In week view you can also drag to another day
+          if (dayCount > 1) {
+            let dayUnderMouse = getDayIndexAtMouse(moveEvent.clientX, dayCount);
+            if (dayUnderMouse !== newDayIndex) {
+              newDayIndex = dayUnderMouse;
+              item.dayIndex = newDayIndex;
+              item.column = 0;       // while dragging, use the full width of the day
+              item.columnCount = 1;
+              setBlockSideways(block, item, dayCount);
+            }
+          }
+
+        } else if (mode === 'resize-top') {
+          // The end time stays the same, only the start moves
+          let endTime = originalStart + originalDur;
+          newStart = keepBetween(originalStart + minutesMoved, earliestTime, endTime - SNAP_MINUTES);
+          newDur = endTime - newStart;
+
+        } else if (mode === 'resize-bottom') {
+          // The start time stays the same, only the end moves
+          newStart = originalStart;
+          newDur = keepBetween(originalDur + minutesMoved, SNAP_MINUTES, latestTime - originalStart);
+        }
+
+        setBlockTimes(block, newStart, newDur, dayCount);
+      }
+
+      function onMouseUp() {
+        block.removeEventListener('pointermove', onMouseMove);
+        block.removeEventListener('pointerup', onMouseUp);
+        block.removeEventListener('pointercancel', onMouseUp);
+        block.classList.remove('dragging');
+
+        // Only save if something actually changed
+        let somethingChanged = newStart !== originalStart || newDur !== originalDur || newDayIndex !== originalDayIndex;
+        if (somethingChanged) {
+          let days = getVisibleDays();
+          saveItemChange(item, newStart, newDur, days[newDayIndex]);
+          showEverything();
+        }
+      }
+
+      block.addEventListener('pointermove', onMouseMove);
+      block.addEventListener('pointerup', onMouseUp);
+      block.addEventListener('pointercancel', onMouseUp); // happens if the browser interrupts the drag
+    }
+
+    // Which day column the mouse is over (0 = first day)
+    function getDayIndexAtMouse(mouseX, dayCount) {
+      let box = document.getElementById('day-columns').getBoundingClientRect();
+      let dayWidth = box.width / dayCount;
+      let index = Math.floor((mouseX - box.left) / dayWidth);
+      return keepBetween(index, 0, dayCount - 1);
+    }
+
+
+    // =========================================================
+    // DRAGGING A TASK FROM THE SIDEBAR ONTO THE CALENDAR
+    // =========================================================
+    function startDraggingTask(event, task, card) {
+      // Clicking the ✓ or × buttons should not start a drag
+      if (event.target.tagName === 'BUTTON') {
+        return;
+      }
+      event.preventDefault();
+
+      let startX = event.clientX;
+      let startY = event.clientY;
+      let preview = null; // the box that follows the mouse. We only make it once the mouse moves.
+
+      function onMouseMove(moveEvent) {
+        // Wait until the mouse moves more than 4 pixels, so a normal click isn't a drag
+        if (preview === null) {
+          let distanceX = moveEvent.clientX - startX;
+          let distanceY = moveEvent.clientY - startY;
+          let distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+          if (distance > 4) {
+            preview = makeDragPreview(task, card);
+            card.style.opacity = '0.4';
+          }
+        }
+
+        // Move the preview box with the mouse
+        if (preview !== null) {
+          preview.style.left = (moveEvent.clientX - 14) + 'px';
+          preview.style.top = (moveEvent.clientY - 16) + 'px';
+        }
+      }
+
+      function onMouseUp(upEvent) {
+        document.removeEventListener('pointermove', onMouseMove);
+        document.removeEventListener('pointerup', onMouseUp);
+        card.style.opacity = '';
+
+        // No preview means the mouse never really moved, so it was just a click
+        if (preview === null) {
+          return;
+        }
+        preview.remove();
+
+        if (appData.view === 'month') {
+          dropTaskOnMonthView(task, upEvent.clientX, upEvent.clientY);
+        } else {
+          dropTaskOnTimeView(task, upEvent.clientX, upEvent.clientY);
+        }
+      }
+
+      // Listen on the whole page, because the mouse will leave the card
+      document.addEventListener('pointermove', onMouseMove);
+      document.addEventListener('pointerup', onMouseUp);
+    }
+
+    // The colored box that follows the mouse while dragging
+    function makeDragPreview(task, card) {
+      let color = getTaskColor(task);
+
+      let preview = document.createElement('div');
+      preview.id = 'drag-preview';
+      preview.textContent = task.title;
+      preview.style.background = colorWithOpacity(color, 0.22);
+      preview.style.borderColor = colorWithOpacity(color, 0.4);
+      preview.style.borderLeftColor = color;
+      preview.style.width = Math.min(card.offsetWidth, 230) + 'px';
+
+      document.body.appendChild(preview);
+      return preview;
+    }
+
+    function dropTaskOnMonthView(task, mouseX, mouseY) {
+      // Find the day box under the mouse
+      let elementUnderMouse = document.elementFromPoint(mouseX, mouseY);
+      if (!elementUnderMouse) {
+        return;
+      }
+      let cell = elementUnderMouse.closest('.month-cell');
+      if (!cell) {
+        return; // dropped somewhere that isn't a day
+      }
+
+      let dateText = cell.dataset.date;
+      placeTask(task, dateText, findFreeTime(dateText, task.duration));
+    }
+
+    function dropTaskOnTimeView(task, mouseX, mouseY) {
+      let box = document.getElementById('day-columns').getBoundingClientRect();
+
+      // Ignore drops outside the calendar
+      if (mouseX < box.left || mouseX > box.right || mouseY < box.top || mouseY > box.bottom) {
+        return;
+      }
+
+      let days = getVisibleDays();
+      let dateText = days[getDayIndexAtMouse(mouseX, days.length)];
+
+      // Turn the mouse height into a time
+      let minutes = FIRST_HOUR * 60 + (mouseY - box.top) / PIXELS_PER_HOUR * 60;
+      minutes = roundToSnap(minutes);
+      minutes = keepBetween(minutes, FIRST_HOUR * 60, LAST_HOUR * 60 - task.duration);
+
+      placeTask(task, dateText, minutes);
+    }
+
+
+    // =========================================================
+    // THE "ADD TASK" FORM
+    // =========================================================
+
+    // Color buttons: give each one its color, and select it when clicked
+    let colorButtons = document.querySelectorAll('.color-button');
+    for (let button of colorButtons) {
+      let colorName = button.dataset.color;
+      button.style.background = COLORS[colorName];
+
+      button.addEventListener('click', function () {
+        selectedColor = colorName;
+        for (let otherButton of colorButtons) {
+          setButtonSelected(otherButton, otherButton === button);
+        }
+      });
+    }
+
+    // Repeat day buttons: turn on and off when clicked
+    let repeatDayButtons = document.querySelectorAll('.repeat-day-button');
+    for (let button of repeatDayButtons) {
+      button.addEventListener('click', function () {
+        let isOn = button.getAttribute('aria-pressed') === 'true';
+        setButtonSelected(button, !isOn);
+      });
+    }
+
+    // Gives back the days that are turned on, like ['mon', 'wed', 'fri']
+    function getSelectedRepeatDays() {
+      let days = [];
+      for (let button of repeatDayButtons) {
+        if (button.getAttribute('aria-pressed') === 'true') {
+          days.push(button.dataset.day);
+        }
+      }
+      return days;
+    }
+
+    function addTask() {
+      let titleInput = document.getElementById('title-input');
+      let title = titleInput.value.trim();
+
+      // Don't add a task with no name
+      if (title === '') {
+        titleInput.focus();
+        return;
+      }
+
+      let minutes = parseInt(document.getElementById('minutes-input').value);
+      if (!minutes) {
+        minutes = 60; // empty box or not a number
+      }
+      if (minutes < 5) {
+        minutes = 5;
+      }
+
+      let newTask = {
+        id: makeId(),
+        title: title,
+        duration: minutes,
+        color: selectedColor
+      };
+
+      // Only make it repeat if the "Repeat weekly" section is open and at least one day is picked
+      let repeatSection = document.getElementById('repeat-section');
+      let repeatDays = getSelectedRepeatDays();
+      if (repeatSection.open && repeatDays.length > 0) {
+        let startTime = document.getElementById('start-time-input').value;
+        if (!startTime) {
+          startTime = '10:00';
+        }
+        newTask.repeat = { days: repeatDays, at: startTime };
+      }
+
+      appData.tasks.push(newTask);
+      saveData();
+      showEverything();
+
+      // Clear the box so the next task can be typed right away
+      titleInput.value = '';
+      titleInput.focus();
+    }
+
+    document.getElementById('add-button').addEventListener('click', addTask);
+
+    // Pressing Enter in the title box also adds the task
+    document.getElementById('title-input').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        addTask();
+      }
+    });
+
+
+    // =========================================================
+    // MOVING AROUND (previous, next, today, changing views)
+    // =========================================================
+
+    // direction is 1 for forward and -1 for back
+    function goForwardOrBack(direction) {
+      if (appData.view === 'day') {
+        appData.currentDate = addDaysToDate(appData.currentDate, direction);
+      } else if (appData.view === 'week') {
+        appData.currentDate = addDaysToDate(appData.currentDate, direction * 7);
+      } else {
+        // Month view. Go to the 1st first, so going from Jan 31 to "Feb 31" doesn't skip March.
+        let date = textToDate(appData.currentDate);
+        date.setDate(1);
+        date.setMonth(date.getMonth() + direction);
+        appData.currentDate = dateToText(date);
+      }
+
+      saveData();
+      showEverything();
+      playSlideAnimation(direction);
+    }
+
+    // A small slide to the side when you change dates
+    function playSlideAnimation(direction) {
+      if (WANTS_LESS_MOTION) {
+        return;
+      }
+
+      let element;
+      if (appData.view === 'month') {
+        element = document.getElementById('month-grid');
+      } else {
+        element = document.getElementById('time-grid');
+      }
+
+      element.animate(
+        [
+          { transform: 'translateX(' + (direction * 24) + 'px)', opacity: 0.45 },
+          { transform: 'none', opacity: 1 }
+        ],
+        { duration: 190, easing: 'cubic-bezier(.22, .61, .36, 1)' }
+      );
+    }
+
+    function goToToday() {
+      appData.currentDate = getTodayText();
+      saveData();
+      showEverything();
+    }
+
+    function changeView(newView) {
+      appData.view = newView;
+      saveData();
+      showEverything();
+      if (newView !== 'month') {
+        scrollToMorning();
+      }
+    }
+
+    // Scroll the calendar so 8 AM is near the top
+    function scrollToMorning() {
+      let scrollAmount = (8 - FIRST_HOUR) * PIXELS_PER_HOUR - 16;
+      document.getElementById('time-scroll').scrollTop = Math.max(0, scrollAmount);
+    }
+
+    document.getElementById('previous-button').addEventListener('click', function () {
+      goForwardOrBack(-1);
+    });
+
+    document.getElementById('next-button').addEventListener('click', function () {
+      goForwardOrBack(1);
+    });
+
+    document.getElementById('today-button').addEventListener('click', goToToday);
+
+    document.getElementById('day-view-button').addEventListener('click', function () {
+      changeView('day');
+    });
+
+    document.getElementById('week-view-button').addEventListener('click', function () {
+      changeView('week');
+    });
+
+    document.getElementById('month-view-button').addEventListener('click', function () {
+      changeView('month');
+    });
+
+    // Keyboard shortcuts
+    //   ← and → : previous and next
+    //   d, w, m : day, week, month view
+    //   t       : today
+    document.addEventListener('keydown', function (event) {
+      // Don't use shortcuts while the person is typing in a box
+      let tag = event.target.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        goForwardOrBack(-1);
+      } else if (event.key === 'ArrowRight') {
+        goForwardOrBack(1);
+      } else if (event.key === 'd') {
+        changeView('day');
+      } else if (event.key === 'w') {
+        changeView('week');
+      } else if (event.key === 'm') {
+        changeView('month');
+      } else if (event.key === 't') {
+        goToToday();
+      }
+    });
+
+    // Swiping sideways on a trackpad goes to the previous or next page
+    let swipeAmount = 0;        // how far the person has swiped so far
+    let swipeLocked = false;    // stops one swipe from changing pages many times
+    let swipeResetTimer = null;
+
+    document.getElementById('calendar-area').addEventListener('wheel', function (event) {
+      // Only care about sideways scrolling
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault(); // stop the browser's own back/forward swipe
+
+      // If the swiping stops for a moment, start counting from zero again
+      clearTimeout(swipeResetTimer);
+      swipeResetTimer = setTimeout(function () {
+        swipeAmount = 0;
+      }, 180);
+
+      if (swipeLocked) {
+        return;
+      }
+
+      swipeAmount = swipeAmount + event.deltaX;
+
+      if (Math.abs(swipeAmount) > 60) {
+        if (swipeAmount > 0) {
+          goForwardOrBack(1);
+        } else {
+          goForwardOrBack(-1);
+        }
+        swipeAmount = 0;
+
+        // Wait a bit before another swipe can count
+        swipeLocked = true;
+        setTimeout(function () {
+          swipeLocked = false;
+        }, 320);
+      }
+    }, { passive: false }); // passive: false is needed so preventDefault() works
+
+
+    // =========================================================
+    // IMPORTING TASKS FROM A .JSON FILE
+    //
+    // The file can be a list of tasks:
+    //   [ { "title": "Gym", "duration": 60, "color": "green" } ]
+    // or an object with a "tasks" list (like a backup file):
+    //   { "tasks": [ ... ] }
+    // =========================================================
+    function importTasksFromText(text) {
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        showMessage("That file isn't valid JSON.");
+        return;
+      }
+
+      let taskList;
+      if (Array.isArray(data)) {
+        taskList = data;
+      } else if (data && Array.isArray(data.tasks)) {
+        taskList = data.tasks;
+      } else {
+        showMessage('No tasks found in that file.');
+        return;
+      }
+
+      let importedCount = 0;
+
+      for (let item of taskList) {
+        // Skip anything without a title
+        if (!item || !item.title) {
+          continue;
+        }
+
+        let duration = parseInt(item.duration);
+        if (!duration) {
+          duration = 60;
+        }
+        if (duration < 5) {
+          duration = 5;
+        }
+
+        let color = 'slate';
+        if (isKnownColor(item.color)) {
+          color = item.color;
+        }
+
+        // Every imported task gets a new id, so it can't clash with one we already have
+        let newTask = {
+          id: makeId(),
+          title: String(item.title),
+          duration: duration,
+          color: color
+        };
+
+        if (item.due) {
+          newTask.due = item.due;
+        }
+
+        if (item.repeat && Array.isArray(item.repeat.days)) {
+          // Only keep real day names like 'mon'
+          let goodDays = [];
+          for (let day of item.repeat.days) {
+            if (DAY_KEYS.includes(day)) {
+              goodDays.push(day);
+            }
+          }
+
+          if (goodDays.length > 0) {
+            newTask.repeat = {
+              days: goodDays,
+              at: item.repeat.at || '09:00',
+              from: item.repeat.from || null,
+              until: item.repeat.until || null
+            };
+          }
+        }
+
+        appData.tasks.push(newTask);
+        importedCount = importedCount + 1;
+      }
+
+      saveData();
+      showEverything();
+
+      if (importedCount === 0) {
+        showMessage('Nothing to import from that file.');
+      } else if (importedCount === 1) {
+        showMessage('Imported 1 task.');
+      } else {
+        showMessage('Imported ' + importedCount + ' tasks.');
+      }
+    }
+
+    // "Import tasks" button: opens the file picker
+    document.getElementById('import-button').addEventListener('click', function () {
+      let fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.json,application/json';
+
+      fileInput.addEventListener('change', function () {
+        let file = fileInput.files[0];
+        if (file) {
+          file.text().then(importTasksFromText);
+        }
+      });
+
+      fileInput.click();
+    });
+
+    // "Save backup" button: downloads all the data as a .json file
+    document.getElementById('backup-button').addEventListener('click', function () {
+      let jsonText = JSON.stringify(appData, null, 2); // the 2 makes the file easy to read
+      let file = new Blob([jsonText], { type: 'application/json' });
+
+      // Make a hidden download link and click it
+      let link = document.createElement('a');
+      link.href = URL.createObjectURL(file);
+      link.download = 'planner-backup-' + getTodayText() + '.json';
+      link.click();
+      URL.revokeObjectURL(link.href);
+
+      showMessage('Backup saved to Downloads.');
+    });
+
+    // Dragging a file onto the page
+    let dropOverlay = document.getElementById('drop-overlay');
+
+    // dragenter and dragleave fire for every element the file passes over,
+    // so we count them to know when the file has really left the page
+    let dragCounter = 0;
+
+    window.addEventListener('dragenter', function (event) {
+      // Only react to files (not dragged text or links)
+      if (!event.dataTransfer || !Array.from(event.dataTransfer.types).includes('Files')) {
+        return;
+      }
+      event.preventDefault();
+      dragCounter = dragCounter + 1;
+      dropOverlay.classList.add('visible');
+    });
+
+    window.addEventListener('dragover', function (event) {
+      // preventDefault() here tells the browser "you're allowed to drop here"
+      if (dropOverlay.classList.contains('visible')) {
+        event.preventDefault();
+      }
+    });
+
+    window.addEventListener('dragleave', function () {
+      dragCounter = dragCounter - 1;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        dropOverlay.classList.remove('visible');
+      }
+    });
+
+    window.addEventListener('drop', function (event) {
+      if (!dropOverlay.classList.contains('visible')) {
+        return;
+      }
+      event.preventDefault(); // stops the browser from opening the file
+      dragCounter = 0;
+      dropOverlay.classList.remove('visible');
+
+      let file = event.dataTransfer.files[0];
+      if (file) {
+        file.text().then(importTasksFromText);
+      }
+    });
+
+
+    // =========================================================
+    // STARTING THE APP
+    // =========================================================
+    let savedData = loadSavedData();
+
+    if (savedData && savedData.tasks) {
+      // Load what was saved last time
+      appData.tasks = savedData.tasks;
+      if (savedData.blocks) {
+        appData.blocks = savedData.blocks;
+      }
+      if (savedData.overrides) {
+        appData.overrides = savedData.overrides;
+      }
+      if (savedData.view === 'day' || savedData.view === 'week' || savedData.view === 'month') {
+        appData.view = savedData.view;
+      }
+    } else {
+      // First time opening the app: add a few example tasks
+      appData.tasks = [
+        { id: makeId(), title: 'Read the assigned chapter', duration: 45, color: 'blue' },
+        { id: makeId(), title: 'Gym', duration: 60, color: 'green' },
+        { id: makeId(), title: 'Email + inbox', duration: 30, color: 'slate' }
+      ];
+    }
+
+    // Always start on today
+    appData.currentDate = getTodayText();
+
+    showEverything();
+    scrollToMorning();
+
+    // Redraw every minute so the red "now" line moves
+    setInterval(function () {
+      if (appData.view !== 'month') {
+        showTimeView();
+      }
+    }, 60000);
+
+    // When the window changes size, redo the month view so the "+3 more" counts are right
+    window.addEventListener('resize', function () {
+      if (appData.view === 'month') {
+        showMonthView();
+      }
+    });
+
+    if (!savingWorks) {
+      showMessage('Running in preview — download the file to keep your data.');
+    }
+  </script>
 </body>
 </html>
